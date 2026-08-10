@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Visual — Levantamento Patrimonial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Cor — identidade institucional (linha Gestão Pública Estratégica) */
+  --verde:#1A4731; --verde-2:#143a27; --azul:#0D3B6E; --ambar:#C87A00; --ambar-2:#a86500; --vermelho:#C0392B;
+  --papel:#F6F4EE; --papel-2:#efece2; --carta:#FFFFFF;
+  --tinta:#1C1C1A; --tinta-2:#55534d; --tinta-3:#8a887f;
+  --linha:#E2DED3; --linha-2:#cfcabb;
+  --verde-bg:#e8f0ea; --azul-bg:#e7eef6; --ambar-bg:#f9efdc; --vermelho-bg:#f8e7e4;
+  /* Tipografia */
+  --serif:"Spectral",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
+  --mono:"IBM Plex Mono","SF Mono",Menlo,Consolas,monospace;
+  /* Espaço e raio */
+  --r:10px; --r-lg:16px;
+  --sombra:0 1px 2px rgba(28,28,26,.04),0 4px 14px rgba(28,28,26,.05);
+  --sombra-2:0 8px 30px rgba(26,71,49,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+
+/* ============ ASSINATURA: PLAQUETA ============ */
+.plaqueta{display:inline-flex;align-items:center;gap:9px;background:var(--verde);color:#f3efe4;
+  padding:7px 14px 7px 11px;border-radius:7px;font-family:var(--mono);font-weight:500;font-size:13px;
+  letter-spacing:.5px;position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.plaqueta::before{content:"";width:8px;height:8px;border-radius:50%;background:rgba(0,0,0,.28);
+  box-shadow:inset 0 1px 1px rgba(0,0,0,.5)}         /* furo de rebite */
+.plaqueta.ambar{background:linear-gradient(180deg,#d98a12,#C87A00);color:#3a2400}
+.plaqueta.ambar::before{background:rgba(0,0,0,.22)}
+.plaqueta.linha{background:transparent;color:var(--verde);border:1.5px solid var(--linha-2)}
+.plaqueta.linha::before{background:var(--ambar)}
+.plaqueta .cod{font-weight:600}
+
+/* ============ HERO ============ */
+.hero{background:
+    radial-gradient(120% 90% at 85% -10%,rgba(200,122,0,.10),transparent 55%),
+    radial-gradient(90% 80% at 0% 110%,rgba(13,59,110,.08),transparent 50%),
+    var(--verde);
+  color:#f3efe4;padding:74px 0 82px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:0;
+  background-image:repeating-linear-gradient(0deg,transparent 0 38px,rgba(255,255,255,.03) 38px 39px);
+  pointer-events:none}                                 /* pautas de livro-tombo */
+.hero .wrap{position:relative;z-index:1}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--ambar);margin-bottom:22px;opacity:.95}
+.hero h1{font-family:var(--serif);font-weight:600;font-size:clamp(34px,5vw,56px);line-height:1.05;letter-spacing:-.5px;max-width:16ch;margin-bottom:20px}
+.hero h1 em{font-style:italic;color:#f0c986}
+.hero .lead{font-size:17px;max-width:52ch;color:#dfe8e2;margin-bottom:34px}
+.hero-tags{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ============ SEÇÕES ============ */
+section{padding:66px 0;border-bottom:1px solid var(--linha)}
+.sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:34px}
+.sec-num{font-family:var(--mono);font-size:13px;color:var(--ambar-2);font-weight:600}
+.sec-head h2{font-family:var(--serif);font-weight:600;font-size:28px;letter-spacing:-.3px}
+.sec-head p{font-size:14px;color:var(--tinta-2);margin-left:auto;max-width:40ch;text-align:right}
+@media(max-width:640px){.sec-head{flex-wrap:wrap}.sec-head p{text-align:left;margin-left:0}}
+
+/* Paleta */
+.paleta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.cor{border-radius:var(--r);overflow:hidden;border:1px solid var(--linha);background:var(--carta)}
+.cor .amostra{height:78px}
+.cor .info{padding:11px 13px}
+.cor .nome{font-size:13px;font-weight:600}
+.cor .hex{font-family:var(--mono);font-size:12px;color:var(--tinta-2);margin-top:2px}
+.cor .uso{font-size:11px;color:var(--tinta-3);margin-top:5px;line-height:1.4}
+
+/* Tipografia */
+.type-row{display:flex;align-items:baseline;gap:20px;padding:16px 0;border-top:1px solid var(--linha)}
+.type-row:first-child{border-top:0}
+.type-label{font-family:var(--mono);font-size:11px;color:var(--tinta-3);width:130px;flex-shrink:0;letter-spacing:.5px}
+.t-display{font-family:var(--serif);font-size:34px;font-weight:600;letter-spacing:-.3px}
+.t-titulo{font-family:var(--serif);font-size:22px;font-weight:600}
+.t-corpo{font-size:15px;max-width:56ch}
+.t-rotulo{font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--tinta-2);font-weight:600}
+.t-cod{font-family:var(--mono);font-size:15px;font-weight:500}
+
+/* Componentes grid */
+.comp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.card{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r-lg);padding:22px;box-shadow:var(--sombra)}
+.card > .rot{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--tinta-3);margin-bottom:16px}
+.btn{font-family:var(--sans);font-size:14px;font-weight:600;padding:11px 20px;border-radius:9px;border:1.5px solid var(--linha-2);background:var(--carta);color:var(--tinta);cursor:pointer;transition:.16s;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--tinta-3);transform:translateY(-1px)}
+.btn.pri{background:var(--verde);color:#fff;border-color:var(--verde);box-shadow:0 3px 10px rgba(26,71,49,.22)}
+.btn.pri:hover{background:var(--verde-2)}
+.btn.amb{background:var(--ambar);color:#fff;border-color:var(--ambar)}
+.btn.amb:hover{background:var(--ambar-2)}
+.btn-col{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.pill{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;display:inline-block}
+.pill.bom{background:var(--verde-bg);color:var(--verde)}
+.pill.regular{background:var(--ambar-bg);color:var(--ambar-2)}
+.pill.ruim{background:var(--vermelho-bg);color:var(--vermelho)}
+.pill.pend{background:#eceae3;color:var(--tinta-2)}
+.pill-col{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+
+/* Ficha (card índice) */
+.ficha{background:var(--carta);border:1px solid var(--linha);border-left:4px solid var(--verde);border-radius:0 var(--r) var(--r) 0;padding:16px 18px}
+.ficha .n{font-family:var(--serif);font-size:30px;line-height:1}
+.ficha .r{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--tinta-2);margin-top:6px}
+
+/* ============ PREVIEW DAS DUAS SUPERFÍCIES ============ */
+.duo{display:grid;grid-template-columns:340px 1fr;gap:32px;align-items:start}
+@media(max-width:820px){.duo{grid-template-columns:1fr}}
+.surf-tag{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--ambar-2);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.surf-tag::before{content:"";width:22px;height:2px;background:var(--ambar)}
+
+/* Moldura de celular — app de campo */
+.fone{width:320px;max-width:100%;background:#111;border-radius:34px;padding:11px;box-shadow:var(--sombra-2);margin:0 auto}
+.fone .tela{background:var(--papel);border-radius:24px;overflow:hidden;height:600px;display:flex;flex-direction:column}
+.f-topo{background:var(--verde);color:#f3efe4;padding:16px 18px 14px}
+.f-topo .linha1{display:flex;justify-content:space-between;align-items:center;font-size:12px;opacity:.85;margin-bottom:12px}
+.f-topo h3{font-family:var(--serif);font-size:19px;font-weight:600}
+.f-topo .sub{font-size:12px;opacity:.8;margin-top:2px}
+.f-corpo{flex:1;overflow:auto;padding:16px}
+.f-item{background:var(--carta);border:1px solid var(--linha);border-radius:12px;padding:13px;margin-bottom:11px;display:flex;gap:12px;align-items:center}
+.f-thumb{width:46px;height:46px;border-radius:9px;background:var(--verde-bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}
+.f-item .desc{flex:1;min-width:0}
+.f-item .desc b{font-size:14px;display:block}
+.f-item .desc small{font-size:11px;color:var(--tinta-2);font-family:var(--mono)}
+.f-nav{background:var(--carta);border-top:1px solid var(--linha);display:flex;padding:8px 6px 10px}
+.f-nav .n{flex:1;text-align:center;font-size:10px;color:var(--tinta-3)}
+.f-nav .n .ic{font-size:20px;display:block;margin-bottom:2px}
+.f-nav .n.on{color:var(--verde);font-weight:600}
+.f-fab{position:absolute;bottom:74px;left:50%;transform:translateX(-50%);width:60px;height:60px;border-radius:50%;background:var(--ambar);color:#fff;border:4px solid var(--papel);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 6px 18px rgba(200,122,0,.4)}
+.fone-wrap{position:relative}
+
+/* Painel desktop */
+.painel-prev{background:var(--carta);border:1px solid var(--linha);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sombra)}
+.pp-topo{background:var(--verde);color:#f3efe4;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--ambar)}
+.pp-topo .marca{font-family:var(--serif);font-size:16px}
+.pp-abas{display:flex;gap:2px;background:var(--verde-2);padding:0 14px}
+.pp-abas span{font-size:12px;color:#dfe8e2;padding:10px 14px;border-bottom:3px solid transparent}
+.pp-abas span.on{color:#fff;border-bottom-color:var(--ambar);background:rgba(0,0,0,.15)}
+.pp-corpo{padding:22px}
+.pp-inds{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:520px){.pp-inds{grid-template-columns:repeat(2,1fr)}}
+.pp-bars{display:flex;align-items:flex-end;gap:14px;height:140px;padding:14px 4px 0;border-top:1px solid var(--linha)}
+.pp-bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end}
+.pp-bar .col{width:100%;max-width:44px;border-radius:6px 6px 0 0;background:var(--verde)}
+.pp-bar .lab{font-size:10px;color:var(--tinta-2);font-family:var(--mono)}
+
+.foot{padding:40px 0 60px;text-align:center;color:var(--tinta-3);font-size:13px}
+.foot .plaqueta{margin-bottom:16px}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Sistema visual · campo + gestão</div>
+    <h1>Uma linguagem só, do <em>corredor</em> à <em>mesa do gestor</em>.</h1>
+    <p class="lead">Coleta em pé, uma mão, às vezes sem rede. Análise sentada, muitos dados. Duas telas com necessidades opostas — unidas pelo mesmo elemento que define o patrimônio público: a plaqueta.</p>
+    <div class="hero-tags">
+      <span class="plaqueta"><span class="cod">UFPB·2026</span></span>
+      <span class="plaqueta ambar"><span class="cod">PATRIMÔNIO</span></span>
+      <span class="plaqueta linha"><span class="cod">100 usuários</span></span>
+    </div>
+  </div>
+</header>
+
+<!-- PALETA -->
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">01</span><h2>Cor</h2><p>A identidade dos seus eBooks, agora em produto. Verde e azul carregam a interface; âmbar e vermelho só sinalizam.</p></div>
+    <div class="paleta">
+      <div class="cor"><div class="amostra" style="background:#1A4731"></div><div class="info"><div class="nome">Verde patrimônio</div><div class="hex">#1A4731</div><div class="uso">Barras, marca, ação principal</div></div></div>
+      <div class="cor"><div class="amostra" style="background:#0D3B6E"></div><div class="info"><div class="nome">Azul registro</div><div class="hex">#0D3B6E</div><div class="uso">Dados, apoio, links</div></div></div>
+      <div class="cor"><div class="amostra" style="background:#C87A00"></div><div class="info"><div class="nome">Âmbar plaqueta</div><div class="hex">#C87A00</div><div class="uso">Destaque, ação de captura</div></div></div>
+      <div class="cor"><div class="amostra" style="background:#C0392B"></div><div class="info"><div class="nome">Vermelho divergência</div><div class="hex">#C0392B</div><div class="uso">Só alerta e extravio</div></div></div>
+      <div class="cor"><div class="amostra" style="background:#F6F4EE;border-bottom:1px solid #E2DED3"></div><div class="info"><div class="nome">Papel</div><div class="hex">#F6F4EE</div><div class="uso">Fundo, ar de livro-tombo</div></div></div>
+      <div class="cor"><div class="amostra" style="background:#1C1C1A"></div><div class="info"><div class="nome">Tinta</div><div class="hex">#1C1C1A</div><div class="uso">Texto principal</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TIPOGRAFIA -->
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">02</span><h2>Tipografia</h2><p>Serifada com ar de documento oficial para títulos. Sans limpa para a interface. Monoespaçada para os códigos — o gesto que amarra tudo.</p></div>
+    <div class="type-row"><span class="type-label">Spectral · display</span><span class="t-display">Levantamento patrimonial</span></div>
+    <div class="type-row"><span class="type-label">Spectral · título</span><span class="t-titulo">Divergências por unidade</span></div>
+    <div class="type-row"><span class="type-label">Sans · corpo</span><span class="t-corpo">Bens esperados e não localizados, consolidados por centro, prontos para conferência formal.</span></div>
+    <div class="type-row"><span class="type-label">Sans · rótulo</span><span class="t-rotulo">Ambientes coletados</span></div>
+    <div class="type-row"><span class="type-label">Mono · código</span><span class="t-cod">SIPAC 000.482.119-7</span></div>
+  </div>
+</section>
+
+<!-- ASSINATURA -->
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">03</span><h2>A plaqueta</h2><p>O componente-assinatura. Formato de etiqueta com furo de rebite e código monoespaçado — o mesmo objeto rebitado em cada bem público.</p></div>
+    <div class="comp-grid">
+      <div class="card"><div class="rot">Marca do sistema</div><span class="plaqueta"><span class="cod">UFPB·PRA</span></span></div>
+      <div class="card"><div class="rot">Código de bem</div><span class="plaqueta linha"><span class="cod">000.482.119-7</span></span></div>
+      <div class="card"><div class="rot">Destaque / captura</div><span class="plaqueta ambar"><span class="cod">CONFERIDO</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENTES -->
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">04</span><h2>Componentes</h2><p>Os mesmos blocos nas duas telas: botões, chips de estado, fichas-indicador.</p></div>
+    <div class="comp-grid">
+      <div class="card"><div class="rot">Ações</div><div class="btn-col"><button class="btn pri">Iniciar coleta</button><button class="btn amb">Capturar bem</button><button class="btn">Exportar</button></div></div>
+      <div class="card"><div class="rot">Estado de conservação</div><div class="pill-col"><span class="pill bom">Bom</span><span class="pill regular">Regular</span><span class="pill ruim">Inservível</span><span class="pill pend">Pendente</span></div></div>
+      <div class="card"><div class="rot">Ficha-indicador</div><div class="ficha"><div class="n">82%</div><div class="r">Concluído</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- DUAS SUPERFÍCIES -->
+<section style="background:linear-gradient(180deg,var(--papel),#efece2)">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">05</span><h2>Uma linguagem, duas telas</h2><p>A prova de que é sistema, não coincidência: campo e gestão falam o mesmo idioma visual.</p></div>
+    <div class="duo">
+      <div>
+        <div class="surf-tag">App de campo · coletor</div>
+        <div class="fone-wrap">
+          <div class="fone"><div class="tela">
+            <div class="f-topo">
+              <div class="linha1"><span class="plaqueta linha" style="color:#f3efe4;border-color:rgba(255,255,255,.3);font-size:11px;padding:4px 10px 4px 8px"><span class="cod">CCEN · Bloco B</span></span><span>◍ offline</span></div>
+              <h3>Sala 214 — Laboratório</h3>
+              <div class="sub">7 bens capturados · toque para revisar</div>
+            </div>
+            <div class="f-corpo">
+              <div class="f-item"><div class="f-thumb">🖥️</div><div class="desc"><b>Monitor LED 24"</b><small>000.482.119-7</small></div><span class="pill bom">Bom</span></div>
+              <div class="f-item"><div class="f-thumb">🪑</div><div class="desc"><b>Cadeira giratória</b><small>000.301.884-2</small></div><span class="pill regular">Regular</span></div>
+              <div class="f-item"><div class="f-thumb">🗄️</div><div class="desc"><b>Armário de aço</b><small>sem plaqueta</small></div><span class="pill pend">Verificar</span></div>
+              <div class="f-item"><div class="f-thumb">🖨️</div><div class="desc"><b>Impressora laser</b><small>000.155.620-9</small></div><span class="pill ruim">Inservível</span></div>
+            </div>
+            <div class="f-nav">
+              <div class="n on"><span class="ic">◉</span>Coletar</div>
+              <div class="n"><span class="ic">▦</span>Ambientes</div>
+              <div class="n"><span class="ic">⇅</span>Sincronizar</div>
+              <div class="n"><span class="ic">☰</span>Mais</div>
+            </div>
+          </div>
+          <div class="f-fab">＋</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="surf-tag">Painel · gestor</div>
+        <div class="painel-prev">
+          <div class="pp-topo"><span class="marca">Levantamento Patrimonial</span><span class="plaqueta ambar" style="font-size:11px;padding:4px 10px 4px 8px"><span class="cod">GESTÃO</span></span></div>
+          <div class="pp-abas"><span class="on">Painel</span><span>Divergências</span><span>Conservação</span><span>Produtividade</span></div>
+          <div class="pp-corpo">
+            <div class="pp-inds">
+              <div class="ficha"><div class="n">82%</div><div class="r">Concluído</div></div>
+              <div class="ficha" style="border-left-color:var(--azul)"><div class="n">760</div><div class="r">Previstos</div></div>
+              <div class="ficha" style="border-left-color:var(--ambar)"><div class="n">539</div><div class="r">Coletados</div></div>
+              <div class="ficha" style="border-left-color:var(--vermelho)"><div class="n">7,4%</div><div class="r">Divergência</div></div>
+            </div>
+            <div class="pp-bars">
+              <div class="pp-bar"><div class="col" style="height:82%"></div><div class="lab">CCEN</div></div>
+              <div class="pp-bar"><div class="col" style="height:47%;background:var(--ambar)"></div><div class="lab">CCS</div></div>
+              <div class="pp-bar"><div class="col" style="height:100%"></div><div class="lab">CT</div></div>
+              <div class="pp-bar"><div class="col" style="height:50%;background:var(--ambar)"></div><div class="lab">CCHLA</div></div>
+              <div class="pp-bar"><div class="col" style="height:93%"></div><div class="lab">PRA</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <div class="wrap">
+    <span class="plaqueta"><span class="cod">SISTEMA VISUAL v1</span></span>
+    <div>Tokens e componentes compartilhados entre o app de campo e o painel de gestão.</div>
+  </div>
+</div>
+
+</body>
+</html>

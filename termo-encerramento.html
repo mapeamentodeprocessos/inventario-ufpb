@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Termo de Encerramento de Inventário</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#1A4731; --azul:#0D3B6E; --ambar:#C87A00; --ambar-2:#a86500; --vermelho:#C0392B;
+  --tinta:#1C1C1A; --tinta-2:#55534d; --tinta-3:#8a887f;
+  --papel:#F6F4EE; --carta:#FFFFFF; --linha:#E2DED3; --linha-2:#cfcabb;
+  --verde-bg:#e8f0ea; --ambar-bg:#f9efdc; --vermelho-bg:#f8e7e4;
+  --serif:"Spectral",Georgia,serif; --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; --mono:"IBM Plex Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);line-height:1.55;-webkit-font-smoothing:antialiased}
+
+.barra-acao{position:sticky;top:0;z-index:10;background:var(--verde);color:#f3efe4;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--ambar)}
+.barra-acao .t{font-family:var(--serif);font-size:15px}
+.barra-acao button{font-family:var(--sans);font-size:13px;font-weight:600;padding:9px 18px;border-radius:8px;border:0;cursor:pointer;background:var(--ambar);color:#fff}
+.barra-acao button:hover{background:var(--ambar-2)}
+
+.folha{max-width:820px;margin:24px auto;background:var(--carta);border:1px solid var(--linha);border-radius:6px;padding:56px 60px;box-shadow:0 4px 24px rgba(28,28,26,.06)}
+
+/* Cabeçalho institucional */
+.cab{text-align:center;border-bottom:2px solid var(--verde);padding-bottom:20px;margin-bottom:28px}
+.cab .brasao{width:46px;height:46px;border-radius:50%;background:var(--verde-bg);border:2px solid var(--verde);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--verde)}
+.cab h1{font-family:var(--serif);font-size:15px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--verde)}
+.cab p{font-size:12px;color:var(--tinta-2);margin-top:3px}
+.cab .doc-titulo{font-family:var(--serif);font-size:22px;font-weight:600;margin-top:18px;color:var(--tinta)}
+.cab .doc-num{font-family:var(--mono);font-size:12px;color:var(--ambar-2);margin-top:5px;letter-spacing:.5px}
+
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 28px;font-size:13px;margin-bottom:26px;padding:16px 18px;background:var(--papel);border-radius:8px}
+.meta .rot{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--tinta-3)}
+.meta .val{font-weight:600;margin-bottom:6px}
+
+h2.sec{font-family:var(--serif);font-size:16px;font-weight:600;color:var(--verde);margin:26px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--linha)}
+p.corpo{font-size:13.5px;text-align:justify;margin-bottom:12px;line-height:1.7}
+
+/* Quadro de reconciliação */
+table{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 16px}
+th{background:var(--verde-bg);color:var(--verde);text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.6px;padding:9px 12px;font-weight:600}
+td{padding:9px 12px;border-top:1px solid var(--linha)}
+td.n{text-align:right;font-family:var(--mono);font-weight:600}
+.cat{display:inline-flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dot.v{background:var(--verde)} .dot.az{background:var(--azul)} .dot.am{background:var(--ambar)} .dot.vm{background:var(--vermelho)} .dot.ci{background:var(--tinta-3)}
+tr.total td{border-top:2px solid var(--verde);font-weight:700;background:var(--papel)}
+.acao-req{font-size:11px;color:var(--tinta-2)}
+
+/* Divergências detalhadas */
+.deteff{font-size:12px}
+.deteff td,.deteff th{padding:7px 10px}
+.plq{font-family:var(--mono);font-size:11px}
+
+/* Trilha */
+.trilha{font-size:12px;color:var(--tinta-2);background:var(--papel);border-left:3px solid var(--ambar);border-radius:0 6px 6px 0;padding:12px 16px;margin-bottom:8px}
+.trilha b{color:var(--tinta)}
+
+/* Assinaturas */
+.assinaturas{margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:44px 40px}
+.assin{text-align:center}
+.assin .risco{border-top:1px solid var(--tinta);margin:0 12px 6px;padding-top:6px}
+.assin .nome{font-size:13px;font-weight:600}
+.assin .cargo{font-size:11px;color:var(--tinta-2)}
+.assin .siape{font-family:var(--mono);font-size:10px;color:var(--tinta-3);margin-top:2px}
+.local-data{text-align:right;font-size:13px;margin:36px 0 8px;color:var(--tinta-2)}
+.rodape{margin-top:40px;padding-top:14px;border-top:1px solid var(--linha);font-size:10.5px;color:var(--tinta-3);text-align:center;line-height:1.6}
+
+@media print{
+  body{background:#fff}
+  .barra-acao{display:none}
+  .folha{max-width:none;margin:0;border:0;border-radius:0;box-shadow:none;padding:0}
+  h2.sec{page-break-after:avoid}
+  table,.assinaturas{page-break-inside:avoid}
+  @page{margin:2cm}
+}
+</style>
+</head>
+<body>
+
+<div class="barra-acao">
+  <span class="t">Termo de Encerramento de Inventário</span>
+  <button onclick="window.print()">Imprimir / Salvar em PDF</button>
+</div>
+
+<div class="folha">
+  <div class="cab">
+    <div class="brasao">UFPB</div>
+    <h1>Universidade Federal da Paraíba</h1>
+    <p>Pró-Reitoria de Administração · Divisão de Patrimônio (DIPA)</p>
+    <div class="doc-titulo">Termo de Encerramento de Inventário</div>
+    <div class="doc-num">Nº 001/2026 · Campanha CCEN — 1º semestre</div>
+  </div>
+
+  <div class="meta">
+    <div><div class="rot">Inventário</div><div class="val">Inventário Geral 2026</div></div>
+    <div><div class="rot">Unidade / centro</div><div class="val">CCEN — Centro de Ciências Exatas e da Natureza</div></div>
+    <div><div class="rot">Período de coleta</div><div class="val">14/07/2026 a 05/08/2026</div></div>
+    <div><div class="rot">Data de encerramento</div><div class="val">08/08/2026</div></div>
+    <div><div class="rot">Base confrontada</div><div class="val">Extração SIPAC de 12/07/2026</div></div>
+    <div><div class="rot">Bens esperados (base)</div><div class="val">2.140</div></div>
+  </div>
+
+  <p class="corpo">Aos oito dias do mês de agosto de dois mil e vinte e seis, a Subcomissão de Inventário designada para o levantamento patrimonial da unidade acima identificada declara encerrado o inventário da campanha em referência, tendo confrontado a base de bens extraída do Sistema Integrado de Patrimônio, Administração e Contratos (SIPAC) com o levantamento físico realizado em campo, na forma da NBC TSP 07, da Instrução Normativa SEDAP nº 205/1988 e da Lei nº 4.320/1964, apurando os seguintes resultados.</p>
+
+  <h2 class="sec">1. Quadro-resumo da reconciliação</h2>
+  <table>
+    <thead><tr><th>Categoria</th><th style="text-align:right">Quantidade</th><th>Providência requerida</th></tr></thead>
+    <tbody>
+      <tr><td><span class="cat"><span class="dot v"></span>Bens conformes</span></td><td class="n">1.837</td><td class="acao-req">Nenhuma — localizado na unidade prevista</td></tr>
+      <tr><td><span class="cat"><span class="dot az"></span>Divergência de localização</span></td><td class="n">45</td><td class="acao-req">Regularizar transferência no SIPAC</td></tr>
+      <tr><td><span class="cat"><span class="dot vm"></span>Não localizados</span></td><td class="n">129</td><td class="acao-req">Abrir apuração de possível extravio</td></tr>
+      <tr><td><span class="cat"><span class="dot am"></span>Não cadastrados</span></td><td class="n">38</td><td class="acao-req">Incorporar / promover tombamento</td></tr>
+      <tr><td><span class="cat"><span class="dot ci"></span>Sem plaqueta</span></td><td class="n">22</td><td class="acao-req">Providenciar plaquetamento</td></tr>
+      <tr class="total"><td>Total de itens tratados</td><td class="n">2.071</td><td></td></tr>
+    </tbody>
+  </table>
+  <p class="corpo">O índice de conformidade apurado foi de 85,8% em relação à base esperada. Os 129 bens não localizados correspondem a 6,0% da base e ensejam a instauração de procedimento de apuração, nos termos da legislação vigente.</p>
+
+  <h2 class="sec">2. Bens não localizados (extrato para apuração)</h2>
+  <table class="deteff">
+    <thead><tr><th>Plaqueta</th><th>Descrição</th><th>Unidade (base)</th></tr></thead>
+    <tbody>
+      <tr><td class="plq">000.301.884-2</td><td>Microcomputador desktop</td><td>CCEN / Depto. Informática</td></tr>
+      <tr><td class="plq">000.298.117-0</td><td>Projetor multimídia</td><td>CCEN / Depto. Matemática</td></tr>
+      <tr><td class="plq">000.155.620-9</td><td>Impressora laser monocromática</td><td>CCEN / Secretaria</td></tr>
+      <tr><td colspan="3" style="color:var(--tinta-3);font-style:italic">… e outros 126 itens listados no anexo I (gerado automaticamente do sistema).</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="sec">3. Trilha de execução</h2>
+  <div class="trilha">Levantamento executado por <b>4 agentes patrimoniais</b>: Ana Ribeiro, Carlos Menezes, Juliana Alves e Marcos Tavares. Total de <b>151 ambientes</b> coletados, com registro fotográfico e horário de cada verificação preservados no log de auditoria imutável do sistema.</div>
+  <div class="trilha">Registro de auditoria: base importada em <b>12/07/2026</b>; primeira coleta em <b>14/07/2026</b>; encerramento e congelamento do resultado em <b>08/08/2026</b>. A partir do encerramento, os dados desta campanha tornaram-se somente-leitura.</div>
+
+  <div class="local-data">João Pessoa, 08 de agosto de 2026.</div>
+
+  <div class="assinaturas">
+    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Presidente da Subcomissão de Inventário</div><div class="siape">SIAPE ___________</div></div>
+    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Membro da Subcomissão</div><div class="siape">SIAPE ___________</div></div>
+    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Membro da Subcomissão</div><div class="siape">SIAPE ___________</div></div>
+    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Gestor de Patrimônio da Unidade</div><div class="siape">SIAPE ___________</div></div>
+  </div>
+
+  <div class="rodape">
+    Documento gerado pelo Sistema de Levantamento Patrimonial · resultado congelado e vinculado ao log de auditoria da campanha.<br>
+    A integridade dos quantitativos é assegurada pelo snapshot imutável registrado no encerramento (função <span class="plq">fechar_campanha</span>).
+  </div>
+</div>
+
+</body>
+</html>
