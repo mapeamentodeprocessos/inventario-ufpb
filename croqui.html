@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Croqui de Ambientes — Planta Esquemática</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#1A4731;--verde-2:#143a27;--azul:#0D3B6E;--ambar:#C87A00;--ambar-2:#a86500;--vermelho:#C0392B;
+  --tinta:#1C1C1A;--tinta-2:#55534d;--tinta-3:#8a887f;
+  --papel:#F6F4EE;--carta:#FFFFFF;--linha:#E2DED3;--linha-2:#cfcabb;
+  --verde-bg:#e8f0ea;--ambar-bg:#f9efdc;
+  --serif:"Spectral",Georgia,serif;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;--mono:"IBM Plex Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--papel);color:var(--tinta);height:100vh;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+
+.topo{background:var(--verde);color:#f3efe4;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--ambar);flex-shrink:0}
+.topo .marca{font-family:var(--serif);font-size:17px;font-weight:600}
+.topo .marca small{display:block;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;opacity:.8}
+.topo .plaqueta{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;background:linear-gradient(180deg,#d98a12,#C87A00);color:#3a2400;padding:4px 11px 4px 9px;border-radius:6px;font-weight:600;position:relative}
+.topo .plaqueta::before{content:"";width:7px;height:7px;border-radius:50%;background:rgba(0,0,0,.22)}
+
+.corpo{flex:1;display:flex;min-height:0}
+.paleta{width:220px;background:var(--carta);border-right:1px solid var(--linha);overflow-y:auto;flex-shrink:0;padding:14px}
+.paleta h3{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--tinta-3);margin:14px 0 8px}
+.paleta h3:first-child{margin-top:0}
+.itens{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.pal-btn{background:var(--papel);border:1.5px solid var(--linha);border-radius:9px;padding:8px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:.13s;font-size:10.5px;color:var(--tinta-2);text-align:center;line-height:1.2}
+.pal-btn:hover{border-color:var(--ambar);background:var(--ambar-bg)}
+.pal-btn.on{border-color:var(--verde);background:var(--verde-bg);color:var(--verde);font-weight:600}
+.pal-btn svg{width:26px;height:26px}
+
+.palco{flex:1;position:relative;overflow:auto;background:
+  linear-gradient(var(--linha) 1px,transparent 1px),
+  linear-gradient(90deg,var(--linha) 1px,transparent 1px);
+  background-size:20px 20px;background-color:#fbfaf6}
+#svg{display:block;min-width:100%;min-height:100%}
+.el{cursor:move}
+.el.sel .hit{stroke:var(--ambar);stroke-width:2;stroke-dasharray:4 3}
+.hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(26,71,49,.92);color:#f3efe4;font-size:12px;padding:7px 14px;border-radius:20px;pointer-events:none;transition:.2s;white-space:nowrap}
+
+.direita{width:190px;background:var(--carta);border-left:1px solid var(--linha);flex-shrink:0;padding:14px;overflow-y:auto}
+.direita h3{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--tinta-3);margin-bottom:10px}
+.acao{width:100%;font-family:var(--sans);font-size:13px;font-weight:600;padding:9px;border-radius:8px;border:1.5px solid var(--linha-2);background:var(--carta);color:var(--tinta);cursor:pointer;margin-bottom:8px;transition:.13s}
+.acao:hover{border-color:var(--tinta-3)}
+.acao.pri{background:var(--verde);color:#fff;border-color:var(--verde)}
+.acao.pri:hover{background:var(--verde-2)}
+.acao.danger{color:var(--vermelho);border-color:#e6c4be}
+.acao.danger:hover{background:#f8e7e4}
+.sep{height:1px;background:var(--linha);margin:14px 0}
+.andar-sel{width:100%;padding:8px 10px;border:1.5px solid var(--linha-2);border-radius:8px;font-size:13px;margin-bottom:12px;font-family:var(--sans)}
+.dica{font-size:11px;color:var(--tinta-3);line-height:1.5;margin-top:6px}
+.legenda{font-size:11px;color:var(--tinta-2);line-height:1.7;margin-top:4px}
+.legenda b{color:var(--tinta)}
+@media(max-width:820px){.direita{display:none}.paleta{width:150px}}
+</style>
+</head>
+<body>
+
+<div class="topo">
+  <div class="marca">Croqui de ambientes<small>Planta esquemática · apoio à decisão</small></div>
+  <span class="plaqueta">CCEN · TÉRREO</span>
+</div>
+
+<div class="corpo">
+  <!-- PALETA -->
+  <div class="paleta" id="paleta">
+    <h3>Ferramenta</h3>
+    <div class="itens">
+      <button class="pal-btn on" data-tool="select"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.6"><path d="M4 3l7 17 2-7 7-2z" stroke-linejoin="round"/></svg>Selecionar</button>
+      <button class="pal-btn" data-tool="sala"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"/></svg>Sala</button>
+    </div>
+    <h3>Estrutura</h3>
+    <div class="itens">
+      <button class="pal-btn" data-tool="parede"><svg viewBox="0 0 24 24" fill="none" stroke="#1c1c1a" stroke-width="3"><line x1="3" y1="12" x2="21" y2="12"/></svg>Parede</button>
+      <button class="pal-btn" data-tool="porta"><svg viewBox="0 0 24 24" fill="none" stroke="#1c1c1a" stroke-width="1.6"><path d="M5 20V5h9v15"/><path d="M14 5a9 9 0 0 1 0 15" stroke-dasharray="2 2"/></svg>Porta</button>
+      <button class="pal-btn" data-tool="janela"><svg viewBox="0 0 24 24" fill="none" stroke="#0D3B6E" stroke-width="1.6"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="14" x2="21" y2="14"/></svg>Janela</button>
+      <button class="pal-btn" data-tool="parede-v"><svg viewBox="0 0 24 24" fill="none" stroke="#1c1c1a" stroke-width="3"><line x1="12" y1="3" x2="12" y2="21"/></svg>Parede vert.</button>
+    </div>
+    <h3>Circulação</h3>
+    <div class="itens">
+      <button class="pal-btn" data-tool="porta-dupla"><svg viewBox="0 0 24 24" fill="none" stroke="#1c1c1a" stroke-width="1.4"><path d="M12 20V6M12 6a7 7 0 0 0-7 14M12 6a7 7 0 0 1 7 14" stroke-dasharray="2 2"/></svg>Porta dupla</button>
+      <button class="pal-btn" data-tool="escada"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><path d="M4 20h4v-4h4v-4h4V8h4"/></svg>Escada</button>
+      <button class="pal-btn" data-tool="elevador"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><rect x="4" y="4" width="16" height="16"/><path d="M12 8l-2 3h4z M12 16l-2-3h4z" fill="#55534d"/></svg>Elevador</button>
+      <button class="pal-btn" data-tool="corredor"><svg viewBox="0 0 24 24" fill="none" stroke="#8a887f" stroke-width="1.4" stroke-dasharray="3 2"><rect x="4" y="4" width="16" height="16"/></svg>Corredor</button>
+    </div>
+    <h3>Mobiliário / bens</h3>
+    <div class="itens">
+      <button class="pal-btn" data-tool="mesa"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><rect x="4" y="8" width="16" height="8" rx="1"/></svg>Mesa</button>
+      <button class="pal-btn" data-tool="cadeira"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><rect x="8" y="8" width="8" height="8" rx="1"/><path d="M8 16v3M16 16v3"/></svg>Cadeira</button>
+      <button class="pal-btn" data-tool="armario"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><rect x="6" y="4" width="12" height="16"/><line x1="12" y1="4" x2="12" y2="20"/></svg>Armário</button>
+      <button class="pal-btn" data-tool="estante"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><rect x="5" y="4" width="14" height="16"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="14" x2="19" y2="14"/></svg>Estante</button>
+      <button class="pal-btn" data-tool="arquivo"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><rect x="6" y="4" width="12" height="16"/><line x1="6" y1="10" x2="18" y2="10"/><line x1="6" y1="16" x2="18" y2="16"/><circle cx="12" cy="7" r=".7" fill="#55534d"/></svg>Arquivo</button>
+      <button class="pal-btn" data-tool="ac"><svg viewBox="0 0 24 24" fill="none" stroke="#0D3B6E" stroke-width="1.4"><rect x="4" y="7" width="16" height="6" rx="2"/><line x1="7" y1="16" x2="7" y2="18"/><line x1="12" y1="16" x2="12" y2="18"/><line x1="17" y1="16" x2="17" y2="18"/></svg>Ar-cond.</button>
+      <button class="pal-btn" data-tool="pc"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><rect x="4" y="5" width="16" height="10" rx="1"/><line x1="9" y1="19" x2="15" y2="19"/><line x1="12" y1="15" x2="12" y2="19"/></svg>Computador</button>
+      <button class="pal-btn" data-tool="bancada"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><rect x="3" y="10" width="18" height="4"/></svg>Bancada</button>
+    </div>
+    <h3>Segurança / instalações</h3>
+    <div class="itens">
+      <button class="pal-btn" data-tool="extintor"><svg viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.5"><rect x="8" y="7" width="8" height="13" rx="3" fill="#f8e7e4"/><line x1="12" y1="4" x2="12" y2="7"/><path d="M12 4h3"/></svg>Extintor</button>
+      <button class="pal-btn" data-tool="hidrante"><svg viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.5"><rect x="5" y="5" width="14" height="14" rx="1" fill="#f8e7e4"/><text x="12" y="16" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" font-weight="700" fill="#C0392B" stroke="none">H</text></svg>Hidrante</button>
+      <button class="pal-btn" data-tool="saida"><svg viewBox="0 0 24 24" fill="none" stroke="#1A4731" stroke-width="1.4"><rect x="3" y="7" width="18" height="10" rx="1" fill="#e8f0ea"/><path d="M9 12h5m-2-2 2 2-2 2" stroke="#1A4731"/></svg>Saída</button>
+      <button class="pal-btn" data-tool="quadro-eletrico"><svg viewBox="0 0 24 24" fill="none" stroke="#C87A00" stroke-width="1.5"><rect x="6" y="4" width="12" height="16" rx="1" fill="#f9efdc"/><path d="M12 8l-2 4h3l-2 4" stroke="#C87A00"/></svg>Quadro elétr.</button>
+      <button class="pal-btn" data-tool="tomada"><svg viewBox="0 0 24 24" fill="none" stroke="#0D3B6E" stroke-width="1.5"><circle cx="12" cy="12" r="7" fill="#e7eef6"/><circle cx="10" cy="12" r="1" fill="#0D3B6E"/><circle cx="14" cy="12" r="1" fill="#0D3B6E"/></svg>Tomada</button>
+      <button class="pal-btn" data-tool="rampa"><svg viewBox="0 0 24 24" fill="none" stroke="#0D3B6E" stroke-width="1.4"><path d="M4 20h16L4 8z" fill="#e7eef6"/><path d="M7 17l8-6" stroke="#0D3B6E" stroke-dasharray="2 2"/></svg>Rampa aces.</button>
+      <button class="pal-btn" data-tool="divisoria"><svg viewBox="0 0 24 24" fill="none" stroke="#8a887f" stroke-width="2.5" stroke-dasharray="3 3"><line x1="3" y1="12" x2="21" y2="12"/></svg>Divisória</button>
+      <button class="pal-btn" data-tool="lousa"><svg viewBox="0 0 24 24" fill="none" stroke="#1A4731" stroke-width="1.5"><rect x="3" y="6" width="18" height="9" rx="1" fill="#1A4731"/></svg>Lousa/quadro</button>
+    </div>
+    <h3>Rótulos</h3>
+    <div class="itens">
+      <button class="pal-btn" data-tool="rotulo"><svg viewBox="0 0 24 24" fill="none" stroke="#55534d" stroke-width="1.5"><path d="M4 7h16M4 12h10"/></svg>Texto</button>
+      <button class="pal-btn" data-tool="plaqueta"><svg viewBox="0 0 24 24" fill="none" stroke="#C87A00" stroke-width="1.5"><rect x="3" y="8" width="14" height="8" rx="2"/><circle cx="6" cy="12" r="1" fill="#C87A00"/></svg>Plaqueta</button>
+      <button class="pal-btn" data-tool="norte"><svg viewBox="0 0 24 24" fill="none" stroke="#C0392B" stroke-width="1.5"><path d="M12 3l4 10-4-3-4 3z" fill="#C0392B"/></svg>Norte</button>
+    </div>
+  </div>
+
+  <!-- PALCO -->
+  <div class="palco">
+    <div class="hint" id="hint">Exemplo carregado. Escolha um elemento na paleta e clique no croqui para inserir.</div>
+    <svg id="svg" width="900" height="640"></svg>
+  </div>
+
+  <!-- PAINEL DIREITO -->
+  <div class="direita">
+    <h3>Andar</h3>
+    <select class="andar-sel" id="andarSel">
+      <option>Térreo</option><option>1º andar</option><option>2º andar</option>
+    </select>
+    <h3>Ações</h3>
+    <button class="acao" id="btnGirar">Girar selecionado (90°)</button>
+    <button class="acao" id="btnRotulo">Renomear rótulo/sala</button>
+    <button class="acao danger" id="btnApagar">Apagar selecionado</button>
+    <div class="sep"></div>
+    <button class="acao pri" id="btnPNG">Salvar como imagem</button>
+    <button class="acao" id="btnImprimir">Imprimir / PDF</button>
+    <button class="acao danger" id="btnLimpar">Limpar tudo</button>
+    <div class="sep"></div>
+    <h3>Como usar</h3>
+    <div class="legenda">
+      <b>Inserir:</b> clique no elemento e depois no croqui.<br>
+      <b>Sala:</b> clique e arraste para desenhar.<br>
+      <b>Mover:</b> ferramenta Selecionar, arraste.<br>
+      <b>Girar/Apagar:</b> selecione e use os botões.
+    </div>
+  </div>
+</div>
+
+<script>
+const SVG_NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById('svg');
+const hint=document.getElementById('hint');
+let tool='select', els=[], selId=null, uid=1, drawing=null;
+
+// ---- desenho de cada tipo (retorna nó SVG posicionado em 0,0) ----
+function glyph(type,w,h,label){
+  const g=document.createElementNS(SVG_NS,'g');
+  const add=(tag,attrs)=>{const e=document.createElementNS(SVG_NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);g.appendChild(e);return e;};
+  const line=(x1,y1,x2,y2,st,sw,extra)=>add('line',{x1,y1,x2,y2,stroke:st,'stroke-width':sw,...(extra||{})});
+  const rect=(x,y,ww,hh,st,sw,fill,extra)=>add('rect',{x,y,width:ww,height:hh,stroke:st,'stroke-width':sw,fill:fill||'none',...(extra||{})});
+  switch(type){
+    case 'sala': rect(0,0,w,h,'#1c1c1a',2.5,'rgba(26,71,49,0.04)',{rx:2});
+      if(label){const t=add('text',{x:w/2,y:16,'text-anchor':'middle','font-family':'IBM Plex Mono,monospace','font-size':12,'font-weight':600,fill:'#1A4731'});t.textContent=label;} break;
+    case 'parede': line(0,h/2,w,h/2,'#1c1c1a',5,{'stroke-linecap':'round'}); break;
+    case 'parede-v': line(w/2,0,w/2,h,'#1c1c1a',5,{'stroke-linecap':'round'}); break;
+    case 'porta': line(0,h,0,0,'#1c1c1a',3); add('path',{d:`M0 0 A ${h} ${h} 0 0 1 ${h} ${h}`,stroke:'#1c1c1a','stroke-width':1.4,fill:'none','stroke-dasharray':'3 2'}); break;
+    case 'porta-dupla': line(w/2,0,w/2,h,'#1c1c1a',2); add('path',{d:`M${w/2} 0 A ${w/2} ${h} 0 0 0 0 ${h}`,stroke:'#1c1c1a','stroke-width':1.2,fill:'none','stroke-dasharray':'3 2'}); add('path',{d:`M${w/2} 0 A ${w/2} ${h} 0 0 1 ${w} ${h}`,stroke:'#1c1c1a','stroke-width':1.2,fill:'none','stroke-dasharray':'3 2'}); break;
+    case 'janela': line(0,h/2-3,w,h/2-3,'#0D3B6E',2); line(0,h/2+3,w,h/2+3,'#0D3B6E',2); break;
+    case 'escada': rect(0,0,w,h,'#8a887f',1,'none'); for(let i=1;i<6;i++)line(i*w/6,0,i*w/6,h,'#8a887f',1); add('path',{d:`M4 ${h-4} L${w-4} 4`,stroke:'#8a887f','stroke-width':1.2,'marker-end':''}); break;
+    case 'elevador': rect(0,0,w,h,'#55534d',1.4,'rgba(0,0,0,0.02)'); add('path',{d:`M${w/2} 6 l-5 7 h10 z`,fill:'#55534d'}); add('path',{d:`M${w/2} ${h-6} l-5 -7 h10 z`,fill:'#55534d'}); break;
+    case 'corredor': rect(0,0,w,h,'#8a887f',1.4,'rgba(0,0,0,0.02)',{'stroke-dasharray':'4 3'}); break;
+    case 'mesa': rect(0,0,w,h,'#55534d',1.5,'#fff',{rx:2}); break;
+    case 'cadeira': rect(w*0.15,h*0.15,w*0.7,h*0.7,'#55534d',1.4,'#fff',{rx:2}); line(w*0.15,h*0.85,w*0.15,h,'#55534d',1.4); line(w*0.85,h*0.85,w*0.85,h,'#55534d',1.4); break;
+    case 'armario': rect(0,0,w,h,'#55534d',1.5,'#f2efe6'); line(w/2,0,w/2,h,'#55534d',1.2); break;
+    case 'estante': rect(0,0,w,h,'#55534d',1.5,'#f2efe6'); line(0,h/3,w,h/3,'#55534d',1); line(0,2*h/3,w,2*h/3,'#55534d',1); break;
+    case 'arquivo': rect(0,0,w,h,'#55534d',1.5,'#f2efe6'); line(0,h/3,w,h/3,'#55534d',1); line(0,2*h/3,w,2*h/3,'#55534d',1); add('circle',{cx:w/2,cy:h/6,r:1.2,fill:'#55534d'}); break;
+    case 'ac': rect(0,h*0.2,w,h*0.45,'#0D3B6E',1.4,'#e7eef6',{rx:3}); line(w*0.25,h*0.7,w*0.25,h*0.9,'#0D3B6E',1.2); line(w*0.5,h*0.7,w*0.5,h*0.9,'#0D3B6E',1.2); line(w*0.75,h*0.7,w*0.75,h*0.9,'#0D3B6E',1.2); break;
+    case 'pc': rect(0,0,w,h*0.7,'#55534d',1.5,'#eef3f8',{rx:1}); line(w*0.35,h*0.7,w*0.65,h*0.7,'#55534d',1.4); line(w/2,h*0.7,w/2,h,'#55534d',1.4); line(w*0.3,h,w*0.7,h,'#55534d',1.4); break;
+    case 'bancada': rect(0,h*0.3,w,h*0.4,'#55534d',1.5,'#f2efe6',{rx:1}); break;
+    case 'extintor': rect(w*0.15,h*0.2,w*0.7,h*0.8,'#C0392B',1.5,'#f8e7e4',{rx:w*0.3}); line(w/2,0,w/2,h*0.2,'#C0392B',1.5); add('path',{d:`M${w/2} 0 h${w*0.3}`,stroke:'#C0392B','stroke-width':1.5}); break;
+    case 'hidrante': rect(0,0,w,h,'#C0392B',1.6,'#f8e7e4',{rx:2}); { const t=add('text',{x:w/2,y:h*0.68,'text-anchor':'middle','font-family':'IBM Plex Mono,monospace','font-size':Math.min(w,h)*0.6,'font-weight':700,fill:'#C0392B'}); t.textContent='H'; } break;
+    case 'saida': rect(0,0,w,h,'#1A4731',1.4,'#e8f0ea',{rx:2}); add('path',{d:`M${w*0.3} ${h/2} h${w*0.3} m-${w*0.12} -${h*0.12} l${w*0.12} ${h*0.12} l-${w*0.12} ${h*0.12}`,stroke:'#1A4731','stroke-width':1.6,fill:'none'}); break;
+    case 'quadro-eletrico': rect(0,0,w,h,'#C87A00',1.6,'#f9efdc',{rx:2}); add('path',{d:`M${w*0.55} ${h*0.2} l-${w*0.25} ${h*0.35} h${w*0.2} l-${w*0.2} ${h*0.35}`,stroke:'#C87A00','stroke-width':1.8,fill:'none','stroke-linejoin':'round'}); break;
+    case 'tomada': add('circle',{cx:w/2,cy:h/2,r:Math.min(w,h)/2-1,fill:'#e7eef6',stroke:'#0D3B6E','stroke-width':1.4}); add('circle',{cx:w*0.38,cy:h/2,r:1.4,fill:'#0D3B6E'}); add('circle',{cx:w*0.62,cy:h/2,r:1.4,fill:'#0D3B6E'}); break;
+    case 'rampa': add('path',{d:`M0 ${h} H${w} L0 ${h*0.25} Z`,fill:'#e7eef6',stroke:'#0D3B6E','stroke-width':1.4,'stroke-linejoin':'round'}); add('path',{d:`M${w*0.15} ${h*0.82} L${w*0.7} ${h*0.4}`,stroke:'#0D3B6E','stroke-width':1.2,'stroke-dasharray':'3 2'}); break;
+    case 'divisoria': line(0,h/2,w,h/2,'#8a887f',3,{'stroke-dasharray':'6 4','stroke-linecap':'round'}); break;
+    case 'lousa': rect(0,0,w,h,'#143a27',1.5,'#1A4731',{rx:2}); { const t=add('text',{x:w/2,y:h/2+4,'text-anchor':'middle','font-family':'Inter,sans-serif','font-size':10,fill:'#cfe0d6'}); t.textContent='quadro'; } break;
+    case 'rotulo': { const t=add('text',{x:0,y:14,'font-family':'Inter,sans-serif','font-size':13,'font-weight':600,fill:'#1c1c1a'}); t.textContent=label||'Texto'; break; }
+    case 'plaqueta': rect(0,0,w,h,'#C87A00',1.4,'#f9efdc',{rx:h/3}); add('circle',{cx:h/2,cy:h/2,r:2,fill:'#C87A00'}); { const t=add('text',{x:h,y:h/2+4,'font-family':'IBM Plex Mono,monospace','font-size':10,'font-weight':600,fill:'#a86500'}); t.textContent=label||'000.000-0'; break; }
+    case 'norte': add('path',{d:`M${w/2} 0 l${w*0.28} ${h*0.7} l${-w*0.28} ${-h*0.25} l${-w*0.28} ${h*0.25} z`,fill:'#C0392B'}); { const t=add('text',{x:w/2,y:h,'text-anchor':'middle','font-family':'IBM Plex Mono,monospace','font-size':11,'font-weight':700,fill:'#C0392B'}); t.textContent='N'; break; }
+  }
+  // hitbox transparente para seleção/arraste
+  const hit=add('rect',{x:-3,y:-3,width:w+6,height:h+6,fill:'transparent',class:'hit',rx:3});
+  hit.setAttribute('class','hit');
+  return g;
+}
+
+const DEF={sala:[160,120],parede:[120,10],'parede-v':[10,120],porta:[40,40],'porta-dupla':[70,50],janela:[80,10],
+  escada:[80,50],elevador:[50,50],corredor:[120,60],mesa:[70,45],cadeira:[30,30],armario:[45,30],estante:[50,40],
+  arquivo:[36,48],ac:[60,30],pc:[36,30],bancada:[110,26],rotulo:[80,20],plaqueta:[90,24],norte:[40,44],
+  extintor:[24,40],hidrante:[36,36],saida:[70,30],'quadro-eletrico':[36,48],tomada:[24,24],rampa:[100,60],divisoria:[120,8],lousa:[140,20]};
+
+function render(){
+  svg.innerHTML='';
+  els.forEach(el=>{
+    const g=glyph(el.type,el.w,el.h,el.label);
+    g.setAttribute('class','el'+(el.id===selId?' sel':''));
+    g.setAttribute('transform',`translate(${el.x} ${el.y}) rotate(${el.rot||0} ${el.w/2} ${el.h/2})`);
+    g.dataset.id=el.id;
+    svg.appendChild(g);
+  });
+}
+function snap(v){return Math.round(v/20)*20;}
+function svgPt(evt){const r=svg.getBoundingClientRect();return{x:evt.clientX-r.left,y:evt.clientY-r.top};}
+
+// ---- paleta ----
+document.querySelectorAll('.pal-btn').forEach(b=>{
+  b.onclick=()=>{document.querySelectorAll('.pal-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');tool=b.dataset.tool;
+    hint.textContent = tool==='select'?'Modo selecionar: arraste para mover, clique para selecionar.':
+      tool==='sala'?'Clique e arraste no croqui para desenhar a sala.':'Clique no croqui para inserir o elemento.';};
+});
+
+// ---- interação no palco ----
+let drag=null;
+svg.addEventListener('pointerdown',e=>{
+  const p=svgPt(e);
+  const gEl=e.target.closest('.el');
+  if(tool==='select'){
+    if(gEl){selId=+gEl.dataset.id;const el=els.find(x=>x.id===selId);drag={id:selId,dx:p.x-el.x,dy:p.y-el.y};render();}
+    else{selId=null;render();}
+    return;
+  }
+  if(tool==='sala'){drawing={x:snap(p.x),y:snap(p.y)};return;}
+  // inserir elemento simples
+  const [w,h]=DEF[tool]||[40,40];
+  let label=null;
+  if(tool==='rotulo'){label=prompt('Texto do rótulo:','Sala 214');if(label===null)return;}
+  if(tool==='plaqueta'){label=prompt('Código da plaqueta:','000.482-7');if(label===null)return;}
+  els.push({id:uid++,type:tool,x:snap(p.x),y:snap(p.y),w,h,rot:0,label});
+  selId=uid-1;render();
+});
+svg.addEventListener('pointermove',e=>{
+  const p=svgPt(e);
+  if(drag){const el=els.find(x=>x.id===drag.id);el.x=snap(p.x-drag.dx);el.y=snap(p.y-drag.dy);render();}
+  else if(drawing){/* preview simples: nada, cria no up */}
+});
+window.addEventListener('pointerup',e=>{
+  if(drawing){const p=svgPt(e);const x=Math.min(drawing.x,snap(p.x)),y=Math.min(drawing.y,snap(p.y));
+    const w=Math.max(60,Math.abs(snap(p.x)-drawing.x)),h=Math.max(40,Math.abs(snap(p.y)-drawing.y));
+    const label=prompt('Nome da sala:','Sala');
+    els.push({id:uid++,type:'sala',x,y,w,h,rot:0,label:label||''});selId=uid-1;drawing=null;render();}
+  drag=null;
+});
+
+// ---- ações ----
+document.getElementById('btnGirar').onclick=()=>{const el=els.find(x=>x.id===selId);if(el){el.rot=((el.rot||0)+90)%360;render();}else alert('Selecione um elemento primeiro.');};
+document.getElementById('btnApagar').onclick=()=>{if(selId){els=els.filter(x=>x.id!==selId);selId=null;render();}else alert('Selecione um elemento primeiro.');};
+document.getElementById('btnRotulo').onclick=()=>{const el=els.find(x=>x.id===selId);if(!el)return alert('Selecione uma sala ou rótulo.');const v=prompt('Novo texto:',el.label||'');if(v!==null){el.label=v;render();}};
+document.getElementById('btnLimpar').onclick=()=>{if(confirm('Apagar todo o croqui?')){els=[];selId=null;render();}};
+document.getElementById('btnImprimir').onclick=()=>window.print();
+document.getElementById('btnPNG').onclick=()=>{
+  const clone=svg.cloneNode(true);clone.setAttribute('xmlns',SVG_NS);
+  const data=new XMLSerializer().serializeToString(clone);
+  const img=new Image();const b=new Blob([data],{type:'image/svg+xml'});const url=URL.createObjectURL(b);
+  img.onload=()=>{const c=document.createElement('canvas');c.width=svg.getAttribute('width');c.height=svg.getAttribute('height');
+    const ctx=c.getContext('2d');ctx.fillStyle='#fbfaf6';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0);
+    c.toBlob(bl=>{const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='croqui.png';a.click();});URL.revokeObjectURL(url);};
+  img.src=url;
+};
+
+// ---- EXEMPLO pré-carregado (a título de exemplificação) ----
+function exemplo(){
+  els=[
+    {id:uid++,type:'sala',x:120,y:100,w:340,h:260,rot:0,label:'Sala 214 — Laboratório'},
+    // paredes já vêm do contorno da sala; adicionamos porta e janela
+    {id:uid++,type:'porta',x:120,y:300,w:40,h:40,rot:0},
+    {id:uid++,type:'janela',x:200,y:92,w:120,h:10,rot:0},
+    {id:uid++,type:'janela',x:340,y:92,w:100,h:10,rot:0},
+    {id:uid++,type:'ac',x:360,y:110,w:60,h:30,rot:0},
+    // mobiliário / bens
+    {id:uid++,type:'bancada',x:150,y:130,w:120,h:26,rot:0},
+    {id:uid++,type:'pc',x:160,y:180,w:36,h:30,rot:0},
+    {id:uid++,type:'pc',x:220,y:180,w:36,h:30,rot:0},
+    {id:uid++,type:'mesa',x:300,y:200,w:70,h:45,rot:0},
+    {id:uid++,type:'cadeira',x:320,y:255,w:30,h:30,rot:0},
+    {id:uid++,type:'estante',x:400,y:180,w:50,h:40,rot:0},
+    {id:uid++,type:'armario',x:400,y:300,w:45,h:30,rot:0},
+    // rótulos e orientação
+    {id:uid++,type:'plaqueta',x:170,y:220,w:90,h:24,rot:0,label:'000.482-7'},
+    {id:uid++,type:'norte',x:500,y:110,w:40,h:44,rot:0},
+    {id:uid++,type:'extintor',x:130,y:130,w:24,h:40,rot:0},
+    {id:uid++,type:'saida',x:500,y:260,w:70,h:30,rot:0},
+    {id:uid++,type:'lousa',x:150,y:340,w:140,h:20,rot:0},
+    {id:uid++,type:'rotulo',x:500,y:340,w:120,h:20,rot:0,label:'Bloco B · Térreo'},
+    // corredor externo
+    {id:uid++,type:'corredor',x:120,y:380,w:340,h:50,rot:0},
+    {id:uid++,type:'rotulo',x:250,y:398,w:80,h:20,rot:0,label:'Corredor'},
+  ];
+  render();
+}
+exemplo();
+</script>
+</body>
+</html>

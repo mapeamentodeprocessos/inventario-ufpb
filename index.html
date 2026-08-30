@@ -544,9 +544,76 @@ body{ background:var(--bg); color:var(--text-primary); }
 /* Foco acessível padronizado */
 select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde) !important; }
 
+
+/* ===== Tela de acesso (login Google + campanha) ===== */
+#authOverlay{position:fixed;inset:0;z-index:9999;background:
+  radial-gradient(120% 90% at 85% -10%,rgba(200,122,0,.12),transparent 55%),var(--verde);
+  display:flex;align-items:center;justify-content:center;padding:24px}
+#authOverlay.hidden{display:none}
+.auth-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:18px;
+  padding:32px 28px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.auth-brand{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;
+  letter-spacing:1px;text-transform:uppercase;color:#3a2400;background:linear-gradient(180deg,#d98a12,#C87A00);
+  padding:5px 13px 5px 10px;border-radius:7px;font-weight:600;margin-bottom:18px;position:relative}
+.auth-brand::before{content:"";width:8px;height:8px;border-radius:50%;background:rgba(0,0,0,.22)}
+.auth-card h2{font-family:var(--font-display);font-size:23px;margin-bottom:6px;color:var(--text-primary)}
+.auth-card p{font-size:13px;color:var(--text-muted);margin-bottom:22px;line-height:1.5}
+.btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  background:#fff;color:#1c1c1a;border:1px solid var(--border);border-radius:10px;padding:12px;
+  font-family:var(--font-body);font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-google:hover{background:#faf9f5;border-color:var(--text-faint)}
+.btn-google svg{width:18px;height:18px}
+.auth-step{margin-top:4px}
+.auth-campaign select{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:10px;
+  font-size:14px;font-family:var(--font-body);background:var(--bg-card);color:var(--text-primary);margin-bottom:14px}
+.auth-enter{width:100%;background:var(--verde);color:#fff;border:0;border-radius:10px;padding:12px;
+  font-weight:600;font-size:14px;cursor:pointer}
+.auth-enter:hover{background:var(--verde-2,#143a27)}
+.auth-msg{font-size:12px;margin-top:12px;min-height:16px}
+.auth-msg.err{color:var(--danger)}
+.auth-msg.ok{color:var(--success)}
+.auth-who{font-size:12px;color:var(--text-muted);margin-bottom:14px}
+.auth-pending{background:var(--pending-bg);border:1px solid #ecd7a8;border-radius:10px;padding:12px 14px;
+  font-size:13px;color:#7a4d05;line-height:1.5}
+.auth-skip{display:block;margin-top:16px;text-align:center;font-size:12px;color:var(--text-faint);
+  background:none;border:0;cursor:pointer;width:100%;text-decoration:underline}
+
 </style>
 </head>
 <body>
+
+<!-- ===== TELA DE ACESSO ===== -->
+<div id="authOverlay">
+  <div class="auth-card">
+    <span class="auth-brand">UFPB·PRA</span>
+    <!-- passo 1: login -->
+    <div id="authLogin" class="auth-step">
+      <h2>Levantamento patrimonial</h2>
+      <p>Entre com sua conta institucional para registrar suas coletas com segurança.</p>
+      <button class="btn-google" id="btnGoogle">
+        <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.8-6.8C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.3 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.5 0 20.1 0 24s1 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.1-5.5c-2 1.3-4.5 2.1-8.8 2.1-6.4 0-11.7-4.1-13.6-9.7l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>
+        Entrar com Google
+      </button>
+      <button class="auth-skip" id="btnOffline">Usar offline sem entrar (não sincroniza)</button>
+      <div class="auth-msg" id="authMsg"></div>
+    </div>
+    <!-- passo 2: escolher campanha -->
+    <div id="authCampaign" class="auth-step auth-campaign" style="display:none">
+      <h2>Escolha a campanha</h2>
+      <div class="auth-who" id="authWho"></div>
+      <select id="authCampSelect"><option>Carregando campanhas...</option></select>
+      <button class="auth-enter" id="btnEnter">Começar a coletar</button>
+      <div class="auth-msg" id="authMsg2"></div>
+    </div>
+    <!-- estado: pendente de aprovação -->
+    <div id="authPending" class="auth-step" style="display:none">
+      <h2>Acesso em análise</h2>
+      <div class="auth-pending">Seu cadastro foi recebido e aguarda aprovação do administrador. Assim que liberarem seu acesso e definirem sua unidade, você poderá coletar. Tente novamente mais tarde.</div>
+      <button class="auth-skip" id="btnOffline2">Usar offline enquanto isso</button>
+    </div>
+  </div>
+</div>
+
 
 <div class="app">
 
@@ -785,7 +852,7 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
   // Endpoint próprio (backend/serverless) que faz proxy para a API da Anthropic
   // guardando a chave do lado do servidor. NUNCA aponte isso direto para
   // api.anthropic.com em produção — veja /api/analyze.js e o README de deploy.
-  const ANALYZE_ENDPOINT = '/api/analyze';
+  const ANALYZE_ENDPOINT = SUPA_URL + '/functions/v1/analisar-foto';
 
   // ---------- Camada de persistência (IndexedDB) ----------
   const DB_NAME = 'coleta_patrimonio_db';
@@ -2439,6 +2506,101 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
       });
     });
   }
+})();
+</script>
+
+
+<!-- ===== Autenticação (Supabase Auth + Google) e escolha de campanha ===== -->
+<script src="sync.js"></script>
+<script>
+(function(){
+  // >>> CONFIG: preencha com os dados do seu projeto Supabase <<<
+  const SUPA_URL  = 'https://cryhgdbbpknvhfgsdmsy.supabase.co';
+  const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyeWhnZGJicGtudmhmZ3NkbXN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMzg2OTEsImV4cCI6MjEwMzYxNDY5MX0.m3FXij5r3iM-6BQFKfvHoiAlBR5sHzpKHwdndtzmGwQ';
+
+  const $ = id => document.getElementById(id);
+  const overlay = $('authOverlay');
+  const show = (el)=>{ ['authLogin','authCampaign','authPending'].forEach(x=>$(x).style.display='none'); $(el).style.display='block'; };
+
+  // expõe SUPA_URL para o ANALYZE_ENDPOINT (definido no script principal)
+  window.SUPA_URL = SUPA_URL;
+
+  async function rest(path, opts){
+    const h = { apikey: SUPA_ANON, 'Content-Type':'application/json', ...(opts&&opts.headers||{}) };
+    const s = JSON.parse(localStorage.getItem('supa_session')||'null');
+    if(s && s.access_token) h.Authorization = 'Bearer '+s.access_token;
+    const r = await fetch(SUPA_URL+path, {...(opts||{}), headers:h});
+    if(!r.ok) throw new Error((await r.text()).slice(0,200));
+    return r.status===204?null:r.json();
+  }
+
+  // 1) Login com Google (OAuth via Supabase)
+  $('btnGoogle').onclick = ()=>{
+    const redirect = location.href.split('#')[0];
+    location.href = SUPA_URL + '/auth/v1/authorize?provider=google&redirect_to=' + encodeURIComponent(redirect);
+  };
+
+  // 2) Ao voltar do Google, o Supabase devolve o token no #fragmento da URL
+  async function capturarRetornoOAuth(){
+    if(!location.hash.includes('access_token')) return false;
+    const p = new URLSearchParams(location.hash.slice(1));
+    const session = { access_token:p.get('access_token'), refresh_token:p.get('refresh_token'),
+                      user:{ id:null, email:null } };
+    // busca dados do usuário
+    const u = await fetch(SUPA_URL+'/auth/v1/user',{headers:{apikey:SUPA_ANON,Authorization:'Bearer '+session.access_token}}).then(r=>r.json());
+    session.user = { id:u.id, email:u.email };
+    localStorage.setItem('supa_session', JSON.stringify(session));
+    history.replaceState(null,'',location.pathname);  // limpa o token da URL
+    return true;
+  }
+
+  // 3) Verifica papel e decide o próximo passo
+  async function verificarAcesso(){
+    const s = JSON.parse(localStorage.getItem('supa_session')||'null');
+    if(!s) { show('authLogin'); return; }
+    try{
+      const perfis = await rest('/rest/v1/profiles?id=eq.'+s.user.id+'&select=nome,role,ativo');
+      const perfil = perfis[0];
+      $('authWho').textContent = 'Conectado como ' + (perfil&&perfil.nome || s.user.email);
+      if(!perfil || perfil.role==='pendente' || !perfil.ativo){ show('authPending'); return; }
+      // aprovado: carrega campanhas abertas
+      const camps = await rest('/rest/v1/campanhas?aberta=eq.true&select=id,nome&order=nome');
+      const sel = $('authCampSelect');
+      if(!camps.length){ sel.innerHTML='<option value="">Nenhuma campanha aberta</option>'; }
+      else sel.innerHTML = camps.map(c=>'<option value="'+c.id+'">'+c.nome+'</option>').join('');
+      show('authCampaign');
+    }catch(e){
+      $('authMsg').className='auth-msg err'; $('authMsg').textContent='Falha ao verificar acesso: '+e.message;
+      show('authLogin');
+    }
+  }
+
+  // 4) Entrar: liga o sync com a campanha escolhida e libera o app
+  $('btnEnter').onclick = ()=>{
+    const campId = $('authCampSelect').value;
+    if(!campId){ $('authMsg2').className='auth-msg err'; $('authMsg2').textContent='Selecione uma campanha.'; return; }
+    const s = JSON.parse(localStorage.getItem('supa_session'));
+    if(window.PatrimonioSync){
+      PatrimonioSync.config({ url:SUPA_URL, anonKey:SUPA_ANON, bucket:'fotos-inventario' });
+      PatrimonioSync.restoreSession({ access_token:s.access_token, user:s.user });
+      PatrimonioSync.setCampaign(campId);
+      PatrimonioSync.start();
+    }
+    overlay.classList.add('hidden');
+  };
+
+  // 5) Modo offline (sem sincronizar) — mantém o app usável como antes
+  const usarOffline = ()=> overlay.classList.add('hidden');
+  $('btnOffline').onclick = usarOffline;
+  $('btnOffline2').onclick = usarOffline;
+
+  // arranque da tela de acesso
+  (async ()=>{
+    // se config não preenchida, vai direto pro modo offline (evita travar em demo)
+    if(SUPA_URL.includes('SEU_REF')){ show('authLogin'); return; }
+    await capturarRetornoOAuth();
+    await verificarAcesso();
+  })();
 })();
 </script>
 
