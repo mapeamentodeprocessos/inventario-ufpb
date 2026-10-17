@@ -138,7 +138,10 @@
       nome: a.name || 'Sem nome',
       andar: a.andar || '',
       modo: a.modo === 'conferencia' ? 'conferencia' : 'levantamento',
-      unidade_code: (a.units && a.units[0]) || null,   // 1º vínculo = escopo
+      // 1º vínculo = escopo. a.units guarda objetos {code, name}; o banco
+      // espera só o código (texto). Enviar o objeto inteiro fazia a regra de
+      // segurança (RLS) nunca bater e devolver 403 ao salvar o ambiente.
+      unidade_code: (a.units && a.units[0] && (a.units[0].code || a.units[0])) || null,
       status: a.status === 'coletado' ? 'coletado' : (a.status || 'pendente'),
       coletado_em: a.collectedAt || null,
       criado_em: a.createdAt || new Date().toISOString()
