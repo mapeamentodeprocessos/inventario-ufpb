@@ -149,6 +149,7 @@
     if(!window.__SUPA_URL || !s || !s.access_token) throw new Error('sem login');
     const h = Object.assign({ apikey: window.__SUPA_ANON, Authorization: 'Bearer ' + s.access_token, 'Content-Type':'application/json' }, (opts && opts.headers) || {});
     const r = await fetch(window.__SUPA_URL + caminho, Object.assign({}, opts || {}, { headers: h }));
+    if(r.status === 401 && !(opts && opts._renovou) && window.renovarSessao && await window.renovarSessao()) return nuvem(caminho, Object.assign({}, opts || {}, { _renovou: true }));
     if(!r.ok) throw new Error((await r.text()).slice(0, 200));
     return r.status === 204 ? null : r.json().catch(() => null);
   }
@@ -452,7 +453,8 @@
   const PROVIDENCIA = { conferidos:'Nenhuma: localizado no local previsto', outroLocal:'Regularizar a transferência no sistema patrimonial',
     naoLocalizados:'Abrir apuração de possível extravio', semRegistro:'Incorporar / promover o tombamento', semPlaqueta:'Providenciar o emplaquetamento',
     duplicados:'Conferir a plaqueta correta e corrigir o lançamento' };
-  function novoEncerramento(){
+  function novoEncerramento(preset){
+    if(preset && preset.unidadeCode) _unidade = preset.unidadeCode;
     const unidNome = _unidade ? ((unidadeDe(A().ambientes().find(a => (unidadeDe(a) || {}).code === _unidade)) || {}).name || _unidade) : '';
     abrirModal('Termo de encerramento do inventário', `
       <p class="ctl-dica">Encerra formalmente o inventário com o resultado da conciliação ${unidNome ? 'da unidade <b>' + esc(unidNome) + '</b>' : 'de <b>todas as unidades levantadas</b>'} (para outra unidade, escolha-a no filtro antes). O documento sai pronto para assinatura da comissão.</p>
@@ -461,6 +463,10 @@
       ${[1,2,3,4].map(n => `<div class="ctl-campo"><label>Comissão — membro ${n}${n === 1 ? ' (presidente)' : ''}</label><input id="enM${n}" placeholder="Nome"></div>`).join('')}
       <div class="ctl-campo"><label>Observações (opcional)</label><textarea id="enObs" rows="3"></textarea></div>
       <button class="btn btn-primary btn-full" id="enOk" type="button">Gerar termo de encerramento</button>`);
+    if(preset){
+      if(preset.campanha) $('enCamp').value = preset.campanha;
+      (preset.comissao || []).slice(0, 4).forEach((m, i) => { $('enM' + (i + 1)).value = typeof m === 'string' ? m : (m.nome || ''); });
+    }
     $('enOk').onclick = async () => {
       const membros = [1,2,3,4].map(n => $('enM' + n).value.trim()).filter(Boolean);
       const R = conciliar(), f = lst => _unidade ? lst.filter(x => x.a ? ((unidadeDe(x.a) || {}).code === _unidade) : true) : lst;
@@ -784,7 +790,22 @@
   document.querySelectorAll('.ctl-aba').forEach(b => b.onclick = () => mostrarAba(b.dataset.aba));
   $('termoAmbienteBtn').onclick = () => termoDoAmbiente();
 
+  // conciliação só dos ambientes de um levantamento
+  function conciliarDe(ambs, unidade){
+    const ids = new Set(ambs.map(a => a.id)), R = conciliar(), f = l => l.filter(x => ids.has(x.a.id));
+    const un = unidade ? [norm(unidade.code), norm(unidade.name)] : [];
+    const nao = R.naoLocalizados.filter(n => ambs.some(a => A().refNoAmbiente(n.ref, a)) || (n.ref.unidade && un.includes(norm(n.ref.unidade))));
+    const out = { conferidos: f(R.conferidos), outroLocal: f(R.outroLocal), semRegistro: f(R.semRegistro), semPlaqueta: f(R.semPlaqueta),
+                  duplicados: f(R.duplicados), pendentes: f(R.pendentes), naoLocalizados: nao };
+    const esperados = out.conferidos.length + out.outroLocal.length + nao.length;
+    out.esperados = esperados; out.conformidade = esperados ? Math.round(out.conferidos.length / esperados * 1000) / 10 : null;
+    out.valorNao = nao.reduce((t, n) => t + (typeof n.ref.valor === 'number' ? n.ref.valor : 0), 0);
+    return out;
+  }
+
   window.CONTROLE = {
+    conciliarDe, novoEncerramento, CATEGORIAS, PROVIDENCIA,
+    ui: { abrirModal, fecharModal, imprimirDocumento, baixarPlanilha, lerArquivo, planilhas, areaDeAssinatura, codigoVerificacao, nuvem, sessao, dinheiro, dataHora },
     abrir: abrirControle, conciliar, transferir, historicoDoItem, termoDoAmbiente, termoDaUnidade,
     exportar: () => ({ termos: ESTADO.termos, transferencias: ESTADO.transferencias, encerramentos: ESTADO.encerramentos }),
     async importar(d){

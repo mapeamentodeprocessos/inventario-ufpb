@@ -36,11 +36,21 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);height:1
 .pal-btn.on{border-color:var(--verde);background:var(--verde-bg);color:var(--verde);font-weight:600}
 .pal-btn svg{width:26px;height:26px}
 
+.palco-wrap{flex:1;position:relative;display:flex;min-width:0;min-height:0}
+.palco-wrap .palco{flex:1}
+#svg{touch-action:none}
+.zoom-bar{position:absolute;right:14px;bottom:14px;display:flex;align-items:center;gap:2px;background:var(--carta);border:1px solid var(--linha-2);border-radius:10px;padding:4px;box-shadow:0 4px 14px rgba(0,0,0,.12);z-index:5}
+.zoom-bar button{min-width:34px;height:32px;border:0;background:none;border-radius:7px;font-size:16px;cursor:pointer;color:var(--tinta);font-family:var(--sans)}
+.zoom-bar button:hover:not(:disabled){background:var(--verde-bg)}
+.zoom-bar button:disabled{opacity:.3;cursor:default}
+.zoom-bar #zValor{font-size:11.5px;font-family:var(--mono);min-width:48px}
+.zoom-bar .zsep{width:1px;height:20px;background:var(--linha);margin:0 3px}
+.alca{cursor:nwse-resize}
 .palco{flex:1;position:relative;overflow:auto;background:
   linear-gradient(var(--linha) 1px,transparent 1px),
   linear-gradient(90deg,var(--linha) 1px,transparent 1px);
   background-size:20px 20px;background-color:#fbfaf6}
-#svg{display:block;min-width:100%;min-height:100%}
+#svg{display:block}
 .el{cursor:move}
 .el.sel .hit{stroke:var(--ambar);stroke-width:2;stroke-dasharray:4 3}
 .hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(26,71,49,.92);color:#f3efe4;font-size:12px;padding:7px 14px;border-radius:20px;pointer-events:none;transition:.2s;white-space:nowrap}
@@ -82,8 +92,14 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);height:1
   body{height:auto;min-height:100vh;overflow:auto}
   .corpo{flex-direction:column}
   .paleta{width:auto;border-right:0;border-bottom:1px solid var(--linha)}
-  .itens{grid-template-columns:repeat(4,1fr)}
-  .palco{flex:none;height:62vh}
+  /* no celular: a planta vem primeiro; as ferramentas ficam em faixas que deslizam para o lado */
+  .palco-wrap{flex:none;height:62vh;order:-1;border-bottom:1px solid var(--linha)}
+  .paleta{padding-top:10px}
+  .itens{display:flex;overflow-x:auto;gap:8px;padding-bottom:6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+  .itens .pal-btn{flex:0 0 80px;scroll-snap-align:start}
+  .paleta>.dica{display:none}
+  .palco{height:100%}
+  .zoom-bar button{min-width:38px;height:36px}
   .direita{width:auto;border-left:0;border-top:1px solid var(--linha)}
   .hint{white-space:normal;max-width:90%;text-align:center}
   .topo{padding:10px 12px}
@@ -111,7 +127,7 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);height:1
 .v3-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;font-size:14px;color:var(--tinta-2);pointer-events:none}
 @media(max-width:820px){ .v3-card{top:auto;bottom:60px;right:10px;left:10px;width:auto} .btn3d{padding:6px 9px} }
 @media print{
-  .paleta,.direita,.voltar,.hint,.btn3d,.v3{display:none !important}
+  .paleta,.direita,.voltar,.hint,.btn3d,.v3,.zoom-bar{display:none !important}
   body{height:auto;overflow:visible}
   .palco{background:none;overflow:visible}
   .topo{background:none;color:#1c1c1a;border-bottom:2px solid #1c1c1a}
@@ -210,9 +226,20 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);height:1
   </div>
 
   <!-- PALCO -->
+  <div class="palco-wrap">
   <div class="palco">
     <div class="hint" id="hint">Exemplo carregado. Escolha um elemento na paleta e clique no croqui para inserir.</div>
     <svg id="svg" width="900" height="640"></svg>
+  </div>
+  <div class="zoom-bar" role="toolbar" aria-label="Zoom e desfazer">
+    <button type="button" id="zDesfazer" title="Desfazer (Ctrl+Z)" disabled>↶</button>
+    <button type="button" id="zRefazer" title="Refazer (Ctrl+Y)" disabled>↷</button>
+    <span class="zsep"></span>
+    <button type="button" id="zMenos" title="Diminuir">−</button>
+    <button type="button" id="zValor" title="Voltar a 100%">100%</button>
+    <button type="button" id="zMais" title="Aumentar">+</button>
+    <button type="button" id="zAjustar" title="Ajustar a planta à tela">⤢</button>
+  </div>
   </div>
 
   <!-- PAINEL DIREITO -->
@@ -274,6 +301,7 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);height:1
     <h3>Ações</h3>
     <button class="acao" id="btnGirar">Girar selecionado (90°)</button>
     <button class="acao" id="btnRotulo">Renomear rótulo/sala</button>
+    <button class="acao" id="btnDuplicar">Duplicar selecionado</button>
     <button class="acao" id="btnDesagrupar">Desagrupar ambiente pronto</button>
     <button class="acao" id="btnReorganizar">Reorganizar bens da sala</button>
     <button class="acao danger" id="btnApagar">Apagar selecionado</button>
@@ -288,7 +316,12 @@ body{font-family:var(--sans);background:var(--papel);color:var(--tinta);height:1
     <div class="legenda">
       <b>Inserir:</b> clique no elemento e depois no croqui.<br>
       <b>Sala:</b> clique e arraste para desenhar.<br>
-      <b>Mover:</b> ferramenta Selecionar, arraste.<br>
+      <b>Mover:</b> ferramenta Selecionar, arraste com o dedo ou o mouse.<br>
+      <b>Tamanho:</b> selecione e arraste o quadradinho laranja do canto.<br>
+      <b>Andar pela planta:</b> arraste no espaço vazio.<br>
+      <b>Zoom:</b> dois dedos (pinça), Ctrl + roda do mouse ou os botões − e +.<br>
+      <b>Errou?</b> ↶ desfaz e ↷ refaz (Ctrl+Z / Ctrl+Y).<br>
+      <b>Teclado:</b> setas movem, Delete apaga, Ctrl+D duplica.<br>
       <b>Girar/Apagar:</b> selecione e use os botões.
     </div>
   </div>
@@ -537,10 +570,18 @@ function render(){
     if(el.bem) svg.appendChild(seloDoBem(el));
   });
   desenharPlaquetas();
+  // alça no canto do elemento selecionado, para redimensionar
+  if(_sel && !_sel.bem && REDIMENSIONAVEIS.includes(_sel.type)){
+    const v = caixaVisual(_sel), t = Math.max(12, 16 / Z);
+    const a = document.createElementNS(SVG_NS, 'rect');
+    a.setAttribute('x', v.x + v.w - t/2); a.setAttribute('y', v.y + v.h - t/2); a.setAttribute('width', t); a.setAttribute('height', t);
+    a.setAttribute('rx', 3); a.setAttribute('fill', '#C87A00'); a.setAttribute('stroke', '#fff'); a.setAttribute('stroke-width', 2); a.setAttribute('class', 'alca');
+    svg.appendChild(a);
+  }
   // a área de desenho cresce junto com a planta (modelos grandes não ficam cortados)
   const maxX = els.reduce((m,e)=>Math.max(m,e.x+e.w),0), maxY = els.reduce((m,e)=>Math.max(m,e.y+e.h),0);
-  svg.setAttribute('width', Math.max(900, maxX+80));
-  svg.setAttribute('height', Math.max(640, maxY+80));
+  BASE = { w: Math.max(900, maxX+80), h: Math.max(640, maxY+80) };
+  aplicarZoom();
   agendarSalvar();
   if(typeof marcarDesenhados==='function') marcarDesenhados();
   if(typeof mostrarPainelBem==='function') mostrarPainelBem();
@@ -548,7 +589,47 @@ function render(){
   if(typeof atualizarLegenda==='function') atualizarLegenda();
 }
 function snap(v){return Math.round(v/20)*20;}
-function svgPt(evt){const r=svg.getBoundingClientRect();return{x:evt.clientX-r.left,y:evt.clientY-r.top};}
+// zoom: o desenho continua nas coordenadas originais (viewBox); só a escala muda
+let Z = 1, BASE = { w: 900, h: 640 };
+const palco = document.querySelector('.palco');
+function svgPt(evt){const r=svg.getBoundingClientRect();return{x:(evt.clientX-r.left)/Z,y:(evt.clientY-r.top)/Z};}
+function aplicarZoom(){
+  // a folha sempre cobre a área visível, em qualquer zoom (dá para inserir em qualquer ponto)
+  const w = Math.max(BASE.w, Math.ceil((palco.clientWidth || 0) / Z)), h = Math.max(BASE.h, Math.ceil((palco.clientHeight || 0) / Z));
+  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h); svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
+  svg.setAttribute('width', Math.round(w * Z)); svg.setAttribute('height', Math.round(h * Z));
+  palco.style.backgroundSize = (20 * Z) + 'px ' + (20 * Z) + 'px';
+  const zv = document.getElementById('zValor'); if(zv) zv.textContent = Math.round(Z * 100) + '%';
+}
+// muda o zoom mantendo parado o ponto da tela em (cx, cy)
+function zoomPara(nz, cx, cy){
+  nz = Math.max(0.3, Math.min(3, nz));
+  const r = svg.getBoundingClientRect();
+  if(cx == null){ const pr = palco.getBoundingClientRect(); cx = pr.left + pr.width/2; cy = pr.top + pr.height/2; }
+  const px = (cx - r.left) / Z, py = (cy - r.top) / Z;
+  Z = nz; aplicarZoom();
+  const r2 = svg.getBoundingClientRect();
+  palco.scrollLeft += (r2.left + px * Z) - cx; palco.scrollTop += (r2.top + py * Z) - cy;
+}
+function ajustarATela(){
+  const usados = els.filter(e => !['rotulo','plaqueta','norte'].includes(e.type));
+  const maxX = usados.reduce((m, e) => Math.max(m, e.x + Math.max(e.w, e.h)), 0) + 40, maxY = usados.reduce((m, e) => Math.max(m, e.y + Math.max(e.w, e.h)), 0) + 40;
+  const z = Math.min((palco.clientWidth - 10) / Math.max(200, maxX), (palco.clientHeight - 10) / Math.max(200, maxY));
+  Z = Math.max(0.3, Math.min(1, z)); aplicarZoom(); palco.scrollLeft = 0; palco.scrollTop = 0;
+}
+
+// ---- desfazer / refazer ----
+const HIST = [], REFAZ = [];
+const estado = () => JSON.stringify({ els, uid });
+function atualizarDesfazer(){ const d = document.getElementById('zDesfazer'), r = document.getElementById('zRefazer'); if(d) d.disabled = !HIST.length; if(r) r.disabled = !REFAZ.length; }
+function marco(){ HIST.push(estado()); if(HIST.length > 60) HIST.shift(); REFAZ.length = 0; atualizarDesfazer(); }
+function soltarMarcoSemMudanca(){ if(HIST.length && HIST[HIST.length-1] === estado()) HIST.pop(); atualizarDesfazer(); }
+function restaurar(txt){ const st = JSON.parse(txt); els = st.els; uid = st.uid; selId = null; render(); atualizarDesfazer(); }
+function desfazer(){ if(!HIST.length) return; REFAZ.push(estado()); restaurar(HIST.pop()); hint.textContent = 'Desfeito.'; }
+function refazer(){ if(!REFAZ.length) return; HIST.push(estado()); restaurar(REFAZ.pop()); hint.textContent = 'Refeito.'; }
+
+// elementos que podem ser redimensionados pelo canto
+const REDIMENSIONAVEIS = ['sala','corredor','parede','parede-v','divisoria','mesa','bancada','estante','armario','arquivo','lousa','escada','rampa','sofa','rack','elevador','janela','porta-dupla','pia'];
 
 // ---- paleta ----
 document.querySelectorAll('.pal-btn').forEach(b=>{
@@ -564,12 +645,30 @@ document.querySelectorAll('.pal-btn').forEach(b=>{
 });
 
 // ---- interação no palco ----
-let drag=null;
+let drag=null, pan=null, redim=null, pinca=null;
+const toques = new Map();
+const distancia = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 svg.addEventListener('pointerdown',e=>{
+  toques.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  if(toques.size >= 2){
+    // dois dedos: zoom de pinça (cancela o arraste que tinha começado)
+    // o primeiro dedo pode ter começado a mover algo: volta como estava
+    if((drag || redim) && HIST.length){ drag = null; redim = null; restaurar(HIST.pop()); }
+    drag = null; redim = null; pan = null; drawing = null; render();
+    const [a, b] = [...toques.values()];
+    pinca = { d: distancia(a, b) || 1, z: Z, cx: (a.x + b.x)/2, cy: (a.y + b.y)/2 };
+    return;
+  }
+  try{ svg.setPointerCapture(e.pointerId); }catch(_){}
   const p=svgPt(e);
+  if(e.target.classList && e.target.classList.contains('alca')){
+    const el = els.find(x => x.id === selId);
+    if(el){ marco(); const v = caixaVisual(el); redim = { el, x0:p.x, y0:p.y, vx:v.x, vy:v.y, vw:v.w, vh:v.h }; hint.textContent = 'Arraste o canto para mudar o tamanho.'; }
+    return;
+  }
   const gEl=e.target.closest('.el');
   if(tool==='select'){
-    if(gEl){selId=+gEl.dataset.id;const el=els.find(x=>x.id===selId);
+    if(gEl){marco(); selId=+gEl.dataset.id;const el=els.find(x=>x.id===selId);
       const membros = el.grp ? els.filter(x=>x.grp===el.grp) : [el];
       // a sala de um ambiente carrega os bens lançados nela
       membros.filter(m => m.type==='sala' && m.ambId!=null).forEach(sala => {
@@ -578,11 +677,16 @@ svg.addEventListener('pointerdown',e=>{
       drag={px:p.x, py:p.y, origem:el, pos:membros.map(m=>({m, x:m.x, y:m.y}))};
       if(el.grp) hint.textContent='Ambiente pronto selecionado: arraste para mover tudo junto. "Desagrupar" libera os móveis.';
       render();}
-    else{selId=null;render();}
+    else{
+      // no espaço vazio, arrastar move a planta inteira (panorâmica)
+      selId=null; render();
+      pan = { sx:e.clientX, sy:e.clientY, sl:palco.scrollLeft, st:palco.scrollTop };
+    }
     return;
   }
   if(tool.indexOf('bloco:')===0){
     const B = BLOCOS[tool.slice(6)]; if(!B) return;
+    marco();
     let nome = presetLabel;
     if(!nome){ nome = prompt('Nome do ambiente:', B.nome); if(nome===null) return; }
     nome = (nome||'').trim() || B.nome;
@@ -598,8 +702,9 @@ svg.addEventListener('pointerdown',e=>{
     hint.textContent = B.nome + ' encaixado. Arraste para posicionar; gire ou desagrupe pelo painel.';
     render(); return;
   }
-  if(tool==='sala'){drawing={x:snap(p.x),y:snap(p.y)};return;}
+  if(tool==='sala'){marco(); drawing={x:snap(p.x),y:snap(p.y)};return;}
   // inserir elemento simples
+  marco();
   const [w,h]=DEF[tool]||[40,40];
   let label=null;
   if(tool==='rotulo'){label=prompt('Texto do rótulo:','Sala 214');if(label===null)return;}
@@ -608,7 +713,21 @@ svg.addEventListener('pointerdown',e=>{
   selId=uid-1;render();
 });
 svg.addEventListener('pointermove',e=>{
+  if(toques.has(e.pointerId)) toques.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  if(pinca && toques.size >= 2){
+    const [a, b] = [...toques.values()];
+    zoomPara(pinca.z * distancia(a, b) / pinca.d, pinca.cx, pinca.cy);
+    return;
+  }
+  if(pan){ palco.scrollLeft = pan.sl - (e.clientX - pan.sx); palco.scrollTop = pan.st - (e.clientY - pan.sy); return; }
   const p=svgPt(e);
+  if(redim){
+    const r = redim, el = r.el, deitado = (el.rot||0) % 180 === 90;
+    const vw = Math.max(20, snap(r.vw + (p.x - r.x0))), vh = Math.max(el.type.indexOf('parede') === 0 || el.type === 'janela' || el.type === 'divisoria' ? 8 : 20, snap(r.vh + (p.y - r.y0)));
+    if(deitado){ el.h = vw; el.w = vh; } else { el.w = vw; el.h = vh; }
+    el.x = Math.round(r.vx + vw/2 - el.w/2); el.y = Math.round(r.vy + vh/2 - el.h/2);
+    render(); return;
+  }
   if(drag){
     // move pelo deslocamento arredondado à grade: o grupo mantém a disposição interna
     const ddx=snap(p.x-drag.px), ddy=snap(p.y-drag.py);
@@ -626,7 +745,22 @@ svg.addEventListener('pointermove',e=>{
     svg.appendChild(r);
   }
 });
+function fimDoToque(e){
+  toques.delete(e.pointerId);
+  if(toques.size < 2) pinca = null;
+  if(pan){ pan = null; return; }
+  if(redim){
+    const el = redim.el; redim = null;
+    // sala de um ambiente com bens: os bens se rearranjam no novo tamanho
+    if(el.type === 'sala' && el.ambId != null && typeof layoutBensDaSala === 'function'){ try{ layoutBensDaSala(el); }catch(_){} }
+    render(); soltarMarcoSemMudanca(); hint.textContent = 'Tamanho ajustado. Desfaça com ↶ se precisar.'; return;
+  }
+}
+window.addEventListener('pointercancel', e => { fimDoToque(e); if(drag){ drag = null; soltarMarcoSemMudanca(); } });
 window.addEventListener('pointerup',e=>{
+  const eraPan = !!pan, eraRedim = !!redim;
+  fimDoToque(e);
+  if(eraPan || eraRedim) return;
   if(drawing){const p=svgPt(e);const x=Math.min(drawing.x,snap(p.x)),y=Math.min(drawing.y,snap(p.y));
     const w=Math.max(60,Math.abs(snap(p.x)-drawing.x)),h=Math.max(40,Math.abs(snap(p.y)-drawing.y));
     let label = presetLabel;
@@ -639,8 +773,24 @@ window.addEventListener('pointerup',e=>{
     const o = drag.pos.find(q => q.m === drag.origem);
     if(o && (o.m.x !== o.x || o.m.y !== o.y)) drag.origem.fixo = true;
   }
+  if(drag){ drag=null; soltarMarcoSemMudanca(); }
   drag=null;
 });
+// no celular, ao escolher uma ferramenta, volta para a planta
+document.querySelectorAll('.pal-btn').forEach(bt => bt.addEventListener('click', () => {
+  if(window.innerWidth >= 820) return;
+  const w = document.querySelector('.palco-wrap'), r = w.getBoundingClientRect();
+  if(r.bottom < 80 || r.top > innerHeight - 80) w.scrollIntoView({ behavior:'smooth', block:'start' });
+  if(bt.dataset.tool !== 'select') hint.textContent = 'Agora toque no croqui onde quer colocar.';
+}));
+// zoom com Ctrl + roda do mouse
+svg.addEventListener('wheel', e => { if(!e.ctrlKey) return; e.preventDefault(); zoomPara(Z * (e.deltaY < 0 ? 1.12 : 1/1.12), e.clientX, e.clientY); }, { passive:false });
+document.getElementById('zMais').onclick = () => zoomPara(Z * 1.25);
+document.getElementById('zMenos').onclick = () => zoomPara(Z / 1.25);
+document.getElementById('zValor').onclick = () => zoomPara(1);
+document.getElementById('zAjustar').onclick = () => ajustarATela();
+document.getElementById('zDesfazer').onclick = desfazer;
+document.getElementById('zRefazer').onclick = refazer;
 
 // ---- ações ----
 function girarGrupo(M){
@@ -684,12 +834,54 @@ document.getElementById('btnDesagrupar').onclick=()=>{const el=els.find(x=>x.id=
   const g=el.grp; els.forEach(x=>{ if(x.grp===g) delete x.grp; }); render();
   hint.textContent='Desagrupado: agora cada móvel se move sozinho.';};
 document.getElementById('btnLimpar').onclick=()=>{if(confirm('Apagar o desenho deste andar?')){els=[];selId=null;render();}};
-document.getElementById('btnImprimir').onclick=()=>window.print();
+document.getElementById('btnImprimir').onclick=()=>{ const z = Z; Z = 1; aplicarZoom(); window.print(); Z = z; aplicarZoom(); };
+// duplicar o selecionado (ou o ambiente pronto inteiro)
+function duplicar(){
+  const el = els.find(x => x.id === selId); if(!el) return alert('Selecione um elemento primeiro.');
+  if(el.bem) return alert('Bens do levantamento não são duplicados na planta: lance o bem no app e ele aparece aqui.');
+  marco();
+  const grupo = el.grp ? els.filter(x => x.grp === el.grp && !x.bem) : [el], novoGrp = el.grp ? uid + 100000 : null;
+  let primeiro = null;
+  grupo.forEach(m => { const c = JSON.parse(JSON.stringify(m)); c.id = uid++; c.x += 40; c.y += 40;
+    delete c.ambId; delete c.ambNome; if(novoGrp) c.grp = novoGrp; else delete c.grp; if(c.type === 'sala' && c.label) c.label = c.label + ' (cópia)';
+    els.push(c); if(!primeiro) primeiro = c; });
+  selId = primeiro.id; render(); hint.textContent = 'Cópia criada ao lado. Arraste para posicionar.';
+}
+document.getElementById('btnDuplicar').onclick = duplicar;
+// as ações do painel podem ser desfeitas
+['btnGirar','btnRotulo','btnDesagrupar','btnReorganizar','btnApagar','btnLimpar'].forEach(id => {
+  const b = document.getElementById(id), f = b.onclick;
+  b.onclick = ev => { marco(); f.call(b, ev); soltarMarcoSemMudanca(); };
+});
+['modeloSel','pbTipo','psPerfil'].forEach(id => document.getElementById(id).addEventListener('change', marco, true));
+// teclado (computador)
+document.addEventListener('keydown', ev => {
+  if(!document.getElementById('v3').hidden) return;
+  const alvo = ev.target, digitando = alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.tagName === 'SELECT');
+  if(digitando) return;
+  const ctrl = ev.ctrlKey || ev.metaKey, k = ev.key.toLowerCase();
+  if(ctrl && k === 'z' && !ev.shiftKey){ ev.preventDefault(); desfazer(); return; }
+  if(ctrl && (k === 'y' || (k === 'z' && ev.shiftKey))){ ev.preventDefault(); refazer(); return; }
+  if(ctrl && k === 'd'){ ev.preventDefault(); duplicar(); return; }
+  if(ev.key === 'Escape'){ selId = null; document.querySelector('.pal-btn[data-tool="select"]').click(); render(); return; }
+  const el = els.find(x => x.id === selId); if(!el) return;
+  if(ev.key === 'Delete' || ev.key === 'Backspace'){ ev.preventDefault(); document.getElementById('btnApagar').click(); return; }
+  const passo = ev.shiftKey ? 100 : 20, d = { ArrowLeft:[-passo,0], ArrowRight:[passo,0], ArrowUp:[0,-passo], ArrowDown:[0,passo] }[ev.key];
+  if(d){
+    ev.preventDefault(); marco();
+    const membros = el.grp ? els.filter(x => x.grp === el.grp) : [el];
+    membros.filter(m => m.type === 'sala' && m.ambId != null).forEach(s => els.forEach(x => { if(x.bem && x.ambId === s.ambId && !membros.includes(x)) membros.push(x); }));
+    membros.forEach(m => { m.x = Math.max(0, m.x + d[0]); m.y = Math.max(0, m.y + d[1]); });
+    if(el.bem) el.fixo = true;
+    render();
+  }
+});
 // ---- exportar imagem, com título da unidade e do andar ----
 document.getElementById('btnPNG').onclick=()=>{
   selId=null; render();
-  const W=+svg.getAttribute('width'), H=+svg.getAttribute('height'), TOPO=58;
-  const clone=svg.cloneNode(true); clone.setAttribute('xmlns',SVG_NS);
+  const W=BASE.w, H=BASE.h, TOPO=58;
+  const clone=svg.cloneNode(true); clone.setAttribute('xmlns',SVG_NS); clone.removeAttribute('viewBox');
+  clone.querySelectorAll('.alca').forEach(a => a.remove());
   clone.setAttribute('width',W); clone.setAttribute('height',H+TOPO);
   const corpo=document.createElementNS(SVG_NS,'g'); corpo.setAttribute('transform',`translate(0 ${TOPO})`);
   while(clone.firstChild) corpo.appendChild(clone.firstChild);
@@ -838,7 +1030,7 @@ function aplicarModelo(nome){
   hint.textContent = nome==='branco' ? 'Andar em branco. Desenhe as salas ou escolha um ambiente na lista.'
                                       : 'Modelo aplicado. Mova, renomeie ou apague o que quiser.';
 }
-document.getElementById('modeloSel').onchange = e => { aplicarModelo(e.target.value); e.target.value=''; };
+document.getElementById('modeloSel').onchange = e => { aplicarModelo(e.target.value); e.target.value=''; if(window.innerWidth < 760) ajustarATela(); };
 
 // ---- salvamento por unidade e andar (neste aparelho) ----
 const CHAVE = a => 'croqui:v1:' + UNID + ':' + normA(a);
@@ -865,7 +1057,9 @@ function carregarAndar(a){
     else els = [];
   }
   const mudou = sincronizarBens();
-  selId = null; render(); _carregando = false;
+  selId = null; HIST.length = 0; REFAZ.length = 0; atualizarDesfazer(); render(); _carregando = false;
+  // no celular a planta começa inteira na tela (dá para ampliar com dois dedos)
+  if(window.innerWidth < 760) ajustarATela();
   if(mudou) salvar();
   document.getElementById('topoAndar').textContent = a.toUpperCase();
   if(salvo) hint.textContent = 'Planta salva carregada. Continue de onde parou.';
@@ -1514,7 +1708,7 @@ function focarAmbientePedido(){
   if(!sala) return;
   selId = sala.id; render();
   const palco = document.querySelector('.palco');
-  if(palco) palco.scrollTo({ left: Math.max(0, sala.x-120), top: Math.max(0, sala.y-120), behavior:'instant' });
+  if(palco) palco.scrollTo({ left: Math.max(0, (sala.x-120)*Z), top: Math.max(0, (sala.y-120)*Z), behavior:'instant' });
   const n = els.filter(e => e.bem && e.ambId===sala.ambId).length;
   hint.textContent = 'Você está em: ' + sala.label + (n ? ' · ' + n + (n===1 ? ' bem lançado' : ' bens lançados') : '');
 }
@@ -1579,6 +1773,7 @@ function redimensionar3D(){
   if(V3.cam){ V3.cam.aspect = w / Math.max(1,h); V3.cam.updateProjectionMatrix(); }
 }
 window.addEventListener('resize', redimensionar3D);
+window.addEventListener('resize', () => aplicarZoom());
 
 function limparCena3D(){
   if(!V3.cena) return;

@@ -1,7 +1,7 @@
 // Versão do cache. SEMPRE que publicar uma alteração no app, troque o número
 // abaixo (v3, v4, ...). Isso apaga o cache antigo e garante que todo mundo
 // receba a versão nova em vez de continuar usando a guardada no aparelho.
-const CACHE_NAME = 'coleta-patrimonio-v10';
+const CACHE_NAME = 'coleta-patrimonio-v13';
 
 const APP_SHELL = [
   './',
@@ -10,6 +10,7 @@ const APP_SHELL = [
   './config.js',
   './sync.js',
   './controle.js',
+  './levantamentos.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
@@ -45,6 +46,12 @@ function ehPaginaDoApp(request) {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // DADOS (Supabase: banco, login, arquivos, funções): sempre direto na rede.
+  // Nunca guardar em cache — a resposta depende de quem está logado e precisa
+  // ser a atual. O app já guarda a própria cópia offline no aparelho.
+  const destino = new URL(event.request.url);
+  if (/\.supabase\.co$/.test(destino.hostname) || /\/(rest|auth|storage|functions)\/v1\//.test(destino.pathname)) return;
 
   // PÁGINAS (index.html, gestao.html...): rede primeiro, cache só como
   // salva-vidas quando o servidor está fora de alcance (uso offline em campo).

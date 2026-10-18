@@ -97,6 +97,9 @@
   }
   async function rest(path, opts) {
     const r = await fetch(state.url + path, { ...(opts || {}), headers: headers((opts || {}).headers) });
+    // acesso vencido: renova o login e tenta de novo uma vez
+    if(r.status === 401 && !(opts && opts._renovou) && global.renovarSessao && await global.renovarSessao())
+      return rest(path, { ...(opts || {}), _renovou: true });
     if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()).slice(0, 180));
     return r.status === 204 ? null : r.json().catch(() => null);
   }
@@ -148,6 +151,11 @@
       criado_em: a.createdAt || new Date().toISOString()
     };
     if(a.orgId) linha.org_id = a.orgId;   // só quando o banco já tem organizações
+    // levantamento e processamento: só depois da migração 04
+    if(!semColunasLev && a.orgId){
+      linha.levantamento_id = ehUuid(a.levantamentoId) ? a.levantamentoId : null;
+      linha.processado_em = a.processado || null;
+    }
     return linha;
   }
   function mapItem(it, ambienteUuid, itemUuid, uid, fotoPath) {
@@ -169,6 +177,7 @@
   /* ---------- Sincronização de um ambiente ---------- */
   async function syncAmbiente(a) {
     const uid = state.session.user.id;
+    const inicio = new Date().toISOString();
     let rec = await mapGet(a.id) || { localId: a.id, uuid: uuid(), itemUuids: {}, synced: false };
 
     // 1) fotos do ambiente -> Storage (path por coletor/ambiente)
@@ -184,8 +193,12 @@
       }
     }
 
-    // 2) ambiente
-    await upsert('ambientes', [mapAmbiente(a, uid, rec.uuid)]);
+    // 2) ambiente (sem as colunas novas, se o banco ainda não tiver a migração 04)
+    try{ await upsert('ambientes', [mapAmbiente(a, uid, rec.uuid)]); }
+    catch(e){
+      if(!semColunasLev && /levantamento_id|processado_em|PGRST204/i.test(e.message)){ semColunasLev = true; await upsert('ambientes', [mapAmbiente(a, uid, rec.uuid)]); }
+      else throw e;
+    }
 
     // 3) itens (achata o array aninhado; UUID estável por item local)
     const itens = Array.isArray(a.items) ? a.items : [];
@@ -199,6 +212,10 @@
     }
 
     rec.synced = true; rec.lastError = null; rec.syncedAt = new Date().toISOString();
+    // só limpa a marca de "alterado" se ninguém mexeu no ambiente durante o envio
+    const agora = await mapGet(a.id);
+    if(agora && agora.dirtyAt && agora.dirtyAt > inicio){ rec.dirty = true; rec.synced = false; rec.dirtyAt = agora.dirtyAt; }
+    else rec.dirty = false;
     await mapPut(rec);
 
     // 4) trilha de auditoria do ambiente (falha aqui não segura o resto)
@@ -208,7 +225,7 @@
   /* ---------- Eventos: auditoria, termos e transferências ---------- */
   // Só existem no banco depois da migração 03. Cada evento tem id próprio e é
   // enviado uma vez; reenviar é inofensivo (o banco ignora o repetido).
-  let semTabelaEventos = false;
+  let semTabelaEventos = false, semColunasLev = false, semTabelaLev = false;
   const ehUuid = v => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v || ''));
   async function postarEventos(linhas){
     if(!linhas.length || semTabelaEventos) return false;
@@ -241,6 +258,52 @@
       const rq = db.transaction('meta', 'readonly').objectStore('meta').get(chave);
       rq.onsuccess = () => res(rq.result ? rq.result.value : null); rq.onerror = () => res(null);
     });
+  }
+  async function gravarMetaDoApp(chave, valor){
+    const db = await openDB(APP_DB);
+    if(!db.objectStoreNames.contains('meta')) return;
+    await new Promise(res => { const tx = db.transaction('meta', 'readwrite'); tx.objectStore('meta').put({ key: chave, value: valor }); tx.oncomplete = res; tx.onerror = res; });
+  }
+  /* ---------- Levantamentos e exclusões ---------- */
+  async function enviarLevantamentos(){
+    const org = (global.ORG && global.ORG.id) || null;
+    if(!org || semTabelaLev) return;
+    const levs = (await lerMetaDoApp('levantamentos:' + org)) || [];
+    const rec = (await mapGet('__lev__:' + org)) || { localId: '__lev__:' + org, versoes: {} };
+    for(const l of levs){
+      if(!ehUuid(l.id)) continue;
+      const linha = { id: l.id, org_id: org, campanha_id: ehUuid(l.campanhaId) ? l.campanhaId : null, unidade_code: l.unidade ? l.unidade.code : null,
+        unidade_nome: l.unidade ? l.unidade.name : null, finalidade: l.finalidade || null, descricao: l.descricao || null, observacao: l.observacao || null,
+        comissao: l.comissao || [], status: l.status === 'processado' ? 'processado' : 'em_andamento', resultado: l.resultado || null, origem: l.origem || null,
+        codigo: l.codigo || null, criado_por_nome: l.criadoPor || null, criado_em: l.criadoEm || new Date().toISOString(),
+        processado_em: l.processadoEm || null, processado_por_nome: l.processadoPor || null, atualizado_em: new Date().toISOString() };
+      const versao = JSON.stringify(Object.assign({}, linha, { atualizado_em: null }));
+      if(rec.versoes[l.id] === versao) continue;
+      try{ await upsert('levantamentos', [linha]); rec.versoes[l.id] = versao; }
+      catch(e){ if(/PGRST20|42P01|does not exist|schema cache|Could not find the table/i.test(e.message)){ semTabelaLev = true; return; } }
+    }
+    await mapPut(rec);
+  }
+  async function enviarExclusoes(){
+    const fila = (await lerMetaDoApp('exclusoes')) || [];
+    if(fila.length){
+      const resta = [];
+      for(const x of fila){
+        const rec = await mapGet(x.localId);
+        if(!rec || !rec.uuid){ continue; }                       // nunca foi enviado: nada a apagar na nuvem
+        try{
+          await rest('/rest/v1/itens?ambiente_id=eq.' + rec.uuid, { method:'DELETE', headers:{ Prefer:'return=minimal' } });
+          await rest('/rest/v1/ambientes?id=eq.' + rec.uuid, { method:'DELETE', headers:{ Prefer:'return=minimal' } });
+        }catch(e){ resta.push(x); }
+      }
+      await gravarMetaDoApp('exclusoes', resta);
+    }
+    const filaLev = (await lerMetaDoApp('exclusoesLev')) || [];
+    if(filaLev.length && !semTabelaLev){
+      const resta = [];
+      for(const x of filaLev){ try{ await rest('/rest/v1/levantamentos?id=eq.' + x.id, { method:'DELETE', headers:{ Prefer:'return=minimal' } }); }catch(e){ resta.push(x); } }
+      await gravarMetaDoApp('exclusoesLev', resta);
+    }
   }
   async function enviarControle(){
     const org = (global.ORG && global.ORG.id) || null;
@@ -287,6 +350,8 @@
       }
     }
     try{ await enviarControle(); }catch(e){ console.warn('controle', e.message); }
+    try{ await enviarLevantamentos(); }catch(e){ console.warn('levantamentos', e.message); }
+    try{ await enviarExclusoes(); }catch(e){ console.warn('exclusões', e.message); }
     state.backoff = fail ? Math.min(state.backoff * 2, 120000) : 5000;
     report({ synced: ok, failed: fail, pending: pend.length - ok, total: ambientes.length });
     return { ok, fail };

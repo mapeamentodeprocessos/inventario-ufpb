@@ -1064,6 +1064,7 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
       </div>
     </div>
 
+    <div id="avisoProcessado" class="aviso-processado" style="display:none">🔒 Este ambiente faz parte de um levantamento <b>processado</b>. Os bens ficam só para consulta. Para alterar, reabra o levantamento em <b>Levantamentos</b>.</div>
     <div id="conferenciaSlot"></div>
 
     <div class="coleta-modo" id="coletaModo">
@@ -1554,6 +1555,7 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
       ambientes: AMBIENTES
     };
     try{ payload.controle = window.CONTROLE ? window.CONTROLE.exportar() : undefined; }catch(e){}
+    try{ payload.levantamentos = window.LEV ? window.LEV.todos() : undefined; }catch(e){}
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
@@ -1589,6 +1591,7 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
         for(const a of AMBIENTES){ await dbSaveAmbiente(a); }
 
         if(data.controle && window.CONTROLE){ try{ await window.CONTROLE.importar(data.controle); }catch(e){} }
+        if(Array.isArray(data.levantamentos) && window.LEV){ try{ await window.LEV.importarLista(data.levantamentos); }catch(e){} }
         if(data.collectorName){
           currentCollectorName = data.collectorName;
           await dbSaveMeta('collectorName', currentCollectorName);
@@ -1734,6 +1737,7 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
           <button type="button" class="unidade-btn" data-acao="novo">+ Ambiente</button>
           <button type="button" class="unidade-btn" data-acao="planta">Planta</button>
           <button type="button" class="unidade-btn" data-acao="termo">Termo</button>
+          <button type="button" class="unidade-btn" data-acao="lev">Levantamento</button>
         </div>` : ''}
       `;
       cab.querySelector('.unidade-toggle').addEventListener('click', () => {
@@ -1746,6 +1750,7 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
         cab.querySelector('[data-acao="novo"]').addEventListener('click', () => abrirNovoAmbiente({ code: u.code, name: u.name, path: u.path }));
         cab.querySelector('[data-acao="planta"]').addEventListener('click', () => abrirPlantaDaUnidade(u));
         cab.querySelector('[data-acao="termo"]').addEventListener('click', () => window.CONTROLE && window.CONTROLE.termoDaUnidade(u));
+        cab.querySelector('[data-acao="lev"]').addEventListener('click', () => window.LEV && window.LEV.abrirDaUnidade(u));
       }
       card.appendChild(cab);
 
@@ -1964,8 +1969,19 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
       const h = { apikey: anon };
       if(ses && ses.access_token) h.Authorization = 'Bearer ' + ses.access_token;
       const filtroOrg = (window.ORG && window.ORG.id) ? '&org_id=eq.' + encodeURIComponent(window.ORG.id) : '';
-      const r = await fetch(url + '/rest/v1/campanhas?aberta=eq.true&select=id,nome&order=nome' + filtroOrg, { headers:h });
-      _campanhas = r.ok ? await r.json() : [];
+      const chaveCache = 'campanhas_abertas:' + ((window.ORG && window.ORG.id) || 'legado');
+      const doAparelho = () => { try{ return JSON.parse(localStorage.getItem(chaveCache) || '[]'); }catch(e){ return []; } };
+      try{
+        if(!navigator.onLine) throw new Error('sem internet');
+        let r = await fetch(url + '/rest/v1/campanhas?aberta=eq.true&select=id,nome&order=nome' + filtroOrg, { headers:h });
+        if(r.status === 401 && window.renovarSessao && await window.renovarSessao()){
+          const s2 = JSON.parse(localStorage.getItem('supa_session')||'null'); if(s2) h.Authorization = 'Bearer ' + s2.access_token;
+          r = await fetch(url + '/rest/v1/campanhas?aberta=eq.true&select=id,nome&order=nome' + filtroOrg, { headers:h });
+        }
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        _campanhas = await r.json();
+        try{ localStorage.setItem(chaveCache, JSON.stringify(_campanhas)); }catch(e){}
+      }catch(e){ _campanhas = doAparelho(); }   // sem internet: as campanhas guardadas da última vez
     }catch(e){ _campanhas = []; }
     renderCampanhas();
   }
@@ -2081,6 +2097,7 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
       editingAmbiente.units = unidadesDoAmbiente;
       const a = editingAmbiente;
       editingAmbiente = null;
+      if(window.LEV) window.LEV.vincular(a);
       dbSaveAmbiente(a);
       screenNewAmbiente.style.display = 'none';
       openAmbiente(a);
@@ -2105,6 +2122,7 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
       collectedBy: null,
       collectedAt: null
     };
+    if(window.LEV) window.LEV.vincular(novo);
     AMBIENTES.unshift(novo);
     dbSaveAmbiente(novo);
     screenNewAmbiente.style.display = 'none';
@@ -2133,6 +2151,10 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
 
   function openAmbiente(a){
     currentAmbiente = a;
+    try{ localStorage.setItem('ultimo_ambiente', String(a.id)); }catch(e){}
+    screenCollection.classList.toggle('somente-leitura', !!a.processado);
+    const avisoProc = document.getElementById('avisoProcessado');
+    if(avisoProc) avisoProc.style.display = a.processado ? 'block' : 'none';
     breadcrumbSala.textContent = a.name;
     const modeBadge = document.getElementById('modeBadge');
     modeBadge.style.display = a.modo === 'conferencia' ? 'inline-block' : 'none';
@@ -2437,12 +2459,30 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
         : 'Nenhum item ainda. Analise uma foto ou adicione manualmente.') + '</div>';
     }
 
+    // bens trazidos do levantamento anterior que ainda não foram conferidos
+    const herdadosPend = items.filter(i => i.herdado && i.status === 'pending');
+    if(herdadosPend.length && !(currentAmbiente && currentAmbiente.processado)){
+      const barra = document.createElement('div');
+      barra.className = 'herdados-barra';
+      const prontos = herdadosPend.filter(i => i.conservacao);
+      barra.innerHTML = `<div><b>${herdadosPend.length}</b> ${herdadosPend.length === 1 ? 'bem veio' : 'bens vieram'} do levantamento anterior e ${herdadosPend.length === 1 ? 'aguarda' : 'aguardam'} conferência. Confirme os que estão aqui e marque "Não localizado" nos que sumiram.</div>` +
+        (prontos.length ? `<button type="button" class="btn btn-ghost btn-sm">✓ Confirmar os ${prontos.length} que já conferi aqui</button>` : '');
+      const b = barra.querySelector('button');
+      if(b) b.addEventListener('click', () => {
+        if(!confirm('Confirmar ' + prontos.length + (prontos.length === 1 ? ' bem como localizado' : ' bens como localizados') + ' neste ambiente, mantendo a conservação anterior? Faça isso só depois de ver os bens fisicamente.')) return;
+        prontos.forEach(i => { i.status = 'confirmed'; });
+        renderItems(); renderAllMarkers(); updateStats(); persistCurrentAmbiente();
+      });
+      itemList.appendChild(barra);
+    }
+
     items.forEach((item, idx) => {
       const card = document.createElement('div');
       card.className = 'item-card state-' + item.status + (item.id === activeItemId ? ' active' : '');
       card.id = 'item-' + item.id;
 
       const metaBits = [];
+      if(item.herdado) metaBits.push('<span class="herdado-badge" title="' + escapeAttr(item.origem || 'levantamento anterior') + '">↺ do levantamento anterior</span>');
       if(item.manual){
         metaBits.push('<span class="manual-badge">Manual</span>');
       } else {
@@ -2495,7 +2535,7 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
         </div>
         <div class="item-actions">
           <button class="icon-btn confirm ${item.status==='confirmed' ? 'on' : ''}" data-action="confirm" ${!item.conservacao ? 'disabled title="Selecione o estado de conservação primeiro"' : ''}>✓ Confirmar</button>
-          <button class="icon-btn discard ${item.status==='discarded' ? 'on' : ''}" data-action="discard">✕ Descartar</button>
+          <button class="icon-btn discard ${item.status==='discarded' ? 'on' : ''}" data-action="discard">${item.herdado ? '✕ Não localizado' : '✕ Descartar'}</button>
         </div>
       `;
 
@@ -3218,7 +3258,39 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
     unidades: () => UNITS,
     novoId,
     telas: { ambientes: screenAmbientes, nova: screenNewAmbiente, coleta: screenCollection, mapa: screenMap, destinacao: screenReconecta },
-    esconderTelas(){ [screenAmbientes, screenNewAmbiente, screenCollection, screenMap, screenReconecta].forEach(t => t.style.display = 'none'); },
+    esconderTelas(){ [screenAmbientes, screenNewAmbiente, screenCollection, screenMap, screenReconecta].forEach(t => t.style.display = 'none');
+      document.querySelectorAll('.tela-extra').forEach(t => t.style.display = 'none'); },
+    // cria um ambiente pronto (importação); itens recebem ids novos
+    criarAmbiente(dados){
+      const a = Object.assign({ id: ambId++, name: 'Ambiente', andar: '', modo: 'levantamento', units: [], status: 'pendente', photos: [], items: [],
+        outputText: null, createdBy: currentCollectorName || null, orgId: (window.ORG && window.ORG.id) || null,
+        createdAt: new Date().toISOString(), collectedBy: null, collectedAt: null }, dados);
+      a.mapPos = a.mapPos || defaultMapPos(a.andar || '');
+      a.items = (dados.items || []).map(i => Object.assign({ confidence: 1, bbox: null, manual: true, status: 'pending' }, i, { id: nextId++ }));
+      AMBIENTES.unshift(a);
+      return a;
+    },
+    novosItens: lista => (lista || []).map(i => Object.assign({ confidence: 1, bbox: null, manual: true, status: 'pending' }, i, { id: nextId++ })),
+    async excluirAmbiente(a){
+      const i = AMBIENTES.indexOf(a); if(i >= 0) AMBIENTES.splice(i, 1);
+      _retratos.delete(a.id);
+      try{ const db = await getDB(); await new Promise((ok, falha) => { const tx = db.transaction('ambientes', 'readwrite'); tx.objectStore('ambientes').delete(a.id); tx.oncomplete = ok; tx.onerror = () => falha(tx.error); }); }catch(e){}
+      try{
+        const fila = (await dbLoadMeta('exclusoes')) || [];
+        fila.push({ localId: a.id, orgId: a.orgId || null, em: new Date().toISOString(), nome: a.name });
+        await dbSaveMeta('exclusoes', fila);
+      }catch(e){}
+      if(currentAmbiente === a) currentAmbiente = null;
+    },
+    novoAmbienteUI(unidade, campanhaId){
+      if(campanhaId){ try{ localStorage.setItem('campanha_ativa', campanhaId); }catch(e){} }
+      this.esconderTelas(); abrirNovoAmbiente(unidade || null);
+    },
+    editarAmbienteUI(a){ this.esconderTelas(); openEditAmbiente(a); },
+    plantaDaUnidade: u => abrirPlantaDaUnidade(u),
+    abrirTela(nome){ this.esconderTelas(); const t = { ambientes: screenAmbientes, mapa: screenMap, destinacao: screenReconecta }[nome]; if(t) t.style.display = 'block';
+      if(nome === 'ambientes'){ updateStatsHome(); renderAmbientes(ambienteSearchInput.value); } if(nome === 'destinacao') renderReconectaScreen();
+      window.scrollTo({ top:0, behavior:'instant' }); },
     voltarLista(){ this.esconderTelas(); screenAmbientes.style.display = 'block'; updateStatsHome(); renderAmbientes(ambienteSearchInput.value); window.scrollTo({ top:0, behavior:'instant' }); }
   };
   // base oficial de cada organização fica guardada separada
@@ -3235,7 +3307,7 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
   window.atualizarListaDaOrg = () => { _atualizarOrg(); if(dbReady) carregarBaseDaOrg(); };
 
   updateConnPill();
-  initApp();
+  window.APP_PRONTO = initApp().then(() => { if(window.LEV && window.LEV.aoIniciar) window.LEV.aoIniciar(); });
 
   if('serviceWorker' in navigator){
     window.addEventListener('load', () => {
@@ -3405,6 +3477,7 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
 <!-- ===== Autenticação (Supabase Auth + Google) e escolha de campanha ===== -->
 <script src="sync.js"></script>
 <script src="controle.js"></script>
+<script src="levantamentos.js"></script>
 <script>
 (function(){
   // >>> CONFIG: preencha com os dados do seu projeto Supabase <<<
@@ -3427,6 +3500,7 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
     const s = JSON.parse(localStorage.getItem('supa_session')||'null');
     if(s && s.access_token) h.Authorization = 'Bearer '+s.access_token;
     const r = await fetch(SUPA_URL+path, {...(opts||{}), headers:h});
+    if(r.status === 401 && !(opts && opts._renovou) && await window.renovarSessao()) return rest(path, Object.assign({}, opts || {}, { _renovou: true }));
     if(!r.ok) throw new Error((await r.text()).slice(0,200));
     const t = await r.text();               // gravações sem corpo (201/204) não são erro
     return t ? JSON.parse(t) : null;
@@ -3451,6 +3525,38 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
     history.replaceState(null,'',location.pathname);  // limpa o token da URL
     return true;
   }
+
+  // O acesso do Supabase vale cerca de 1 hora. Com o "refresh token" guardado
+  // no login, o app renova sozinho — inclusive depois de um dia inteiro em campo
+  // sem internet —, sem pedir para entrar de novo.
+  let _renovando = null;
+  window.renovarSessao = function(){
+    if(_renovando) return _renovando;
+    _renovando = (async () => {
+      try{
+        const s = JSON.parse(localStorage.getItem('supa_session') || 'null');
+        if(!s || !s.refresh_token || !navigator.onLine) return false;
+        const r = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', { method:'POST',
+          headers:{ apikey: SUPA_ANON, 'Content-Type':'application/json' }, body: JSON.stringify({ refresh_token: s.refresh_token }) });
+        if(!r.ok) return false;
+        const d = await r.json();
+        if(!d.access_token) return false;
+        s.access_token = d.access_token; if(d.refresh_token) s.refresh_token = d.refresh_token;
+        localStorage.setItem('supa_session', JSON.stringify(s));
+        if(window.PatrimonioSync) PatrimonioSync.restoreSession({ access_token: s.access_token, user: s.user });
+        return true;
+      }catch(e){ return false; }
+      finally{ setTimeout(() => { _renovando = null; }, 0); }
+    })();
+    return _renovando;
+  };
+  function expiraEm(){
+    try{ const s = JSON.parse(localStorage.getItem('supa_session') || 'null'); const p = JSON.parse(atob(s.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); return (p.exp || 0) * 1000; }
+    catch(e){ return 0; }
+  }
+  async function manterSessao(){ const e = expiraEm(); if(e && e - Date.now() < 5 * 60 * 1000 && navigator.onLine) await window.renovarSessao(); }
+  setInterval(manterSessao, 4 * 60 * 1000);
+  window.addEventListener('online', () => setTimeout(manterSessao, 1500));
 
   // 3) Verifica papel e decide o próximo passo
   let _minhaUnidade = null;
@@ -3659,8 +3765,9 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
   }
 
   async function verificarAcesso(){
-    const s = JSON.parse(localStorage.getItem('supa_session')||'null');
+    let s = JSON.parse(localStorage.getItem('supa_session')||'null');
     if(!s) { show('authLogin'); return; }
+    try{ await manterSessao(); s = JSON.parse(localStorage.getItem('supa_session')||'null') || s; }catch(e){}
     try{
       const perfis = await rest('/rest/v1/profiles?id=eq.'+s.user.id+'&select=nome,role,ativo,tipo_agente');
       const perfil = perfis[0];

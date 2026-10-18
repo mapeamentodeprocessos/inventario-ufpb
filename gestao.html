@@ -217,7 +217,7 @@ tr:hover td{background:#faf9f5}
     <button data-sec="divergencias" onclick="aba(this)">Divergências</button>
     <button data-sec="conservacao" onclick="aba(this)">Conservação</button>
     <button data-sec="produtividade" onclick="aba(this)">Produtividade</button>
-    <button data-sec="controle" id="abaControle" onclick="aba(this)" style="display:none">Termos e movimentações</button>
+    <button data-sec="controle" id="abaControle" onclick="aba(this)" style="display:none">Levantamentos e termos</button>
     <button data-sec="admin" id="abaAdmin" onclick="aba(this)" style="display:none">Administração</button>
   </div>
 
@@ -265,7 +265,7 @@ tr:hover td{background:#faf9f5}
     <section class="secao" id="sec-controle">
       <div class="indicadores" id="indCtl"></div>
       <div class="acoes"><select id="ctlTipo" class="inp" style="width:auto;padding:6px 10px;font-size:12.5px" onchange="carregarControle()">
-        <option value="termo">Termos de responsabilidade</option><option value="transferencia">Transferências</option><option value="auditoria">Histórico de alterações</option></select>
+        <option value="levantamentos">Levantamentos</option><option value="termo">Termos de responsabilidade</option><option value="transferencia">Transferências</option><option value="auditoria">Histórico de alterações</option></select>
         <input id="ctlBusca" class="inp" style="width:auto;flex:1;min-width:180px;padding:6px 10px;font-size:12.5px" placeholder="Filtrar por plaqueta, pessoa, ambiente…" oninput="renderControle()">
         <button class="btn mini" onclick="exportarControle()">Exportar CSV</button></div>
       <div class="painel"><div id="tabCtl"></div></div>
@@ -401,10 +401,26 @@ async function sb(path, opts={}){
   const h = {"apikey":CONFIG.SUPABASE_ANON_KEY,"Content-Type":"application/json",...(opts.headers||{})};
   if(SESSION?.access_token) h["Authorization"]="Bearer "+SESSION.access_token;
   const r = await fetch(url,{...opts,headers:h});
+  // acesso vencido (cerca de 1 hora): renova com o refresh token e tenta de novo
+  if(r.status===401 && !opts._renovou && await renovarGestao()) return sb(path,{...opts,_renovou:true});
   if(!r.ok) throw new Error((await r.text())||r.status);
   // gravações com "return=minimal" voltam sem corpo (201/204): não é erro
   const t = await r.text();
   return t ? JSON.parse(t) : null;
+}
+async function renovarGestao(){
+  try{
+    const g = JSON.parse(localStorage.getItem("gestao_session")||"null");
+    const rt = (SESSION && SESSION.refresh_token) || (g && g.refresh_token);
+    if(!rt) return false;
+    const r = await fetch(CONFIG.SUPABASE_URL+"/auth/v1/token?grant_type=refresh_token",{method:"POST",
+      headers:{apikey:CONFIG.SUPABASE_ANON_KEY,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:rt})});
+    if(!r.ok) return false;
+    const d = await r.json(); if(!d.access_token) return false;
+    SESSION = Object.assign(SESSION||{}, { access_token:d.access_token, refresh_token:d.refresh_token||rt });
+    localStorage.setItem("gestao_session", JSON.stringify({ access_token:SESSION.access_token, refresh_token:SESSION.refresh_token }));
+    return true;
+  }catch(e){ return false; }
 }
 function jwtClaims(t){ try{return JSON.parse(atob(t.split(".")[1]))}catch{return {}} }
 
@@ -867,8 +883,13 @@ async function carregarControle(){
   const tipo = document.getElementById("ctlTipo").value, box = document.getElementById("tabCtl");
   box.innerHTML = '<p class="vazio">Carregando…</p>';
   try{
-    const sel = tipo === "auditoria" ? "id,tipo,ocorrido_em,dados" : "id,tipo,ocorrido_em,dados";
-    EVENTOS = await sb(`/rest/v1/eventos?org_id=eq.${ORG.id}&tipo=eq.${tipo}&select=${sel}&order=ocorrido_em.desc&limit=2000`);
+    if(tipo === "levantamentos"){
+      const ls = await sb(`/rest/v1/levantamentos?org_id=eq.${ORG.id}&select=*&order=criado_em.desc&limit=2000`);
+      EVENTOS = ls.map(l => ({ id: l.id, tipo: "levantamento", dados: l }));
+      document.getElementById("indCtl").innerHTML = `<div class="ind"><div class="n">${ls.length}</div><div class="r">Levantamentos</div></div><div class="ind a"><div class="n">${ls.filter(l => l.status !== "processado").length}</div><div class="r">Em andamento</div></div><div class="ind v"><div class="n">${ls.filter(l => l.status === "processado").length}</div><div class="r">Processados</div></div>`;
+      renderControle(); return;
+    }
+    EVENTOS = await sb(`/rest/v1/eventos?org_id=eq.${ORG.id}&tipo=eq.${tipo}&select=id,tipo,ocorrido_em,dados&order=ocorrido_em.desc&limit=2000`);
     if(tipo === "transferencia"){
       const aceites = await sb(`/rest/v1/eventos?org_id=eq.${ORG.id}&tipo=eq.aceite&select=dados,ocorrido_em&limit=5000`);
       const porT = new Map(aceites.map(a => [a.dados.transferencia, a]));
@@ -882,14 +903,19 @@ async function carregarControle(){
       : `<div class="ind"><div class="n">${n}</div><div class="r">Alterações registradas (últimas 2000)</div></div>`;
     renderControle();
   }catch(e){
-    box.innerHTML = /eventos|schema cache|does not exist/i.test(e.message)
-      ? '<p class="vazio"><b>Ainda não ativado</b>Rode a migração 03 no Supabase para receber termos, transferências e histórico dos aparelhos.</p>'
+    box.innerHTML = /eventos|levantamentos|schema cache|does not exist/i.test(e.message)
+      ? '<p class="vazio"><b>Ainda não ativado</b>Rode as migrações 03 e 04 no Supabase para receber levantamentos, termos, transferências e histórico dos aparelhos.</p>'
       : '<p class="vazio">Falha ao carregar: ' + esc(e.message) + '</p>';
   }
 }
 function linhasControle(){
   const tipo = document.getElementById("ctlTipo").value, q = normG(document.getElementById("ctlBusca").value);
   const linhas = EVENTOS.map(e => { const d = e.dados || {};
+    if(tipo === "levantamentos"){ const c = (d.resultado && d.resultado.conciliacao) || {};
+      return { "Unidade": d.unidade_nome || d.unidade_code, "Finalidade": d.finalidade, "Descrição": d.descricao, "Situação": d.status === "processado" ? "processado" : "em andamento",
+        "Iniciado": quando(d.criado_em) + (d.criado_por_nome ? " · " + d.criado_por_nome : ""), "Processado": d.processado_em ? quando(d.processado_em) + (d.processado_por_nome ? " · " + d.processado_por_nome : "") : "",
+        "Ambientes": d.resultado ? d.resultado.ambientes : "", "Bens confirmados": d.resultado ? d.resultado.confirmados : "",
+        "Conformidade": c.conformidade != null ? String(c.conformidade).replace(".", ",") + "%" : "", "Comissão": (d.comissao || []).map(m => m.nome).join(", "), "Código": d.codigo || "" }; }
     if(tipo === "termo") return { "Número": d.numero, "Data": quando(d.em), "Espécie": d.especie === "encerramento" ? "Encerramento" : "Responsabilidade",
       "Local": d.escopo ? d.escopo.nome : d.unidade, "Responsável": d.responsavel ? d.responsavel.nome : ("Comissão: " + (d.membros || []).join(", ")),
       "Cargo": d.responsavel ? d.responsavel.cargo : "", "Bens": d.itens ? d.itens.length : d.esperados,
@@ -930,7 +956,7 @@ async function checarSessaoGoogle(){
     history.replaceState(null,"",location.pathname);
   } else {
     const s = JSON.parse(localStorage.getItem("gestao_session")||"null");
-    if(s) token = s.access_token;
+    if(s){ token = s.access_token; refresh = s.refresh_token || null; }
   }
   if(!token) return; // sem sessão: fica na tela de login
   try{
