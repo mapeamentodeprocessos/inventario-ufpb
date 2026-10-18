@@ -238,7 +238,7 @@
       case 'tutorial': if(window.abrirTutorial) window.abrirTutorial(); return;
       case 'sair':
         if(!confirm('Sair desta conta? O que ainda não foi enviado continua guardado neste aparelho.')) return;
-        try{ localStorage.removeItem('supa_session'); }catch(e){}
+        try{ localStorage.removeItem('supa_session'); localStorage.removeItem('gestao_session'); }catch(e){}
         location.reload(); return;
     }
     marcar(dest);
