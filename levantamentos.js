@@ -278,7 +278,7 @@
       case 'tutorial': if(window.abrirTutorial) window.abrirTutorial(); return;
       case 'sair':
         if(!confirm('Sair desta conta? O que ainda não foi enviado continua guardado neste aparelho.')) return;
-        try{ localStorage.removeItem('supa_session'); localStorage.removeItem('gestao_session'); }catch(e){}
+        try{ localStorage.removeItem('supa_session'); localStorage.removeItem('gestao_session'); localStorage.removeItem('acesso_ok'); localStorage.removeItem('gestao_cache'); }catch(e){}
         location.reload(); return;
     }
     marcar(dest);
@@ -847,6 +847,9 @@
     async importarLista(lista){ LEVS = lista; await gravar(); },
     abrirDaUnidade(u){ const l = LEVS.find(x => x.status !== 'processado' && x.unidade && x.unidade.code === u.code) || LEVS.find(x => x.unidade && x.unidade.code === u.code); if(l) abrirLev(l); else iniciarLevantamento({ unidade: { code: u.code, name: u.name, path: u.path || '' } }); },
     async aoIniciar(){
+      try{ await this._iniciar(); } finally { document.documentElement.classList.remove('decidindo-tela'); }
+    },
+    async _iniciar(){
       await carregar();
       await garantirVinculos();
       atualizarCabecalho();

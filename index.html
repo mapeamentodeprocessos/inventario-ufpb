@@ -738,6 +738,20 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
 .ctl-escolha button small{display:block;font-size:11px;color:var(--text-faint)}
 .ctl-escolha button.on{border-color:var(--verde);background:var(--success-bg)}
 </style>
+<style>html.retomando #authOverlay{display:none !important}
+/* a lista de ambientes é a tela-padrão do HTML; espera o app decidir a tela (Início ou a do F5) para não piscar */
+html.decidindo-tela #screenAmbientes{display:none !important}</style>
+<script>
+document.documentElement.classList.add('decidindo-tela');
+setTimeout(function(){ document.documentElement.classList.remove('decidindo-tela'); }, 6000);  // segurança
+/* quem já entrou neste aparelho vai direto para o app; o acesso é conferido por trás */
+(function(){ try{
+  var s = JSON.parse(localStorage.getItem('supa_session') || 'null');
+  if(s && s.access_token && s.user && s.user.id && localStorage.getItem('acesso_ok') === s.user.id
+     && localStorage.getItem('org_ativa') && localStorage.getItem('tutorial_visto_v1') === '1' && location.hash.indexOf('access_token') < 0)
+    document.documentElement.classList.add('retomando');
+}catch(e){} })();
+</script>
 </head>
 <body>
 
@@ -3488,7 +3502,10 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
 
   const $ = id => document.getElementById(id);
   const overlay = $('authOverlay');
-  const show = (el)=>{ ['authLogin','authCadastro','authOrg','authTutorial','authPending'].forEach(x=>$(x).style.display='none'); $(el).style.display='block';
+  // retomando: o app já está aberto; se a conferência pedir alguma etapa (login, cadastro, organização), a tela aparece
+  const pedirTela = () => { document.documentElement.classList.remove('retomando'); };
+  const show = (el)=>{ pedirTela(); ['authLogin','authCadastro','authOrg','authTutorial','authPending'].forEach(x=>$(x).style.display='none'); $(el).style.display='block';
+    if(document.documentElement.dataset.conferindo === '1') overlay.classList.remove('hidden');
     const card=document.querySelector('.auth-card'); const cover=(el==='authLogin');
     if(card) card.style.display = cover?'none':'block';
     overlay.classList.toggle('cover', cover); };
@@ -3575,9 +3592,11 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
     const camp = localStorage.getItem('campanha_ativa');
     if(camp){ PatrimonioSync.setCampaign(camp); PatrimonioSync.start(); }
   }
+  let _syncLigado = false;
   function entrarNoApp(){
-    ligarSync();
+    if(!_syncLigado){ ligarSync(); _syncLigado = true; }
     overlay.classList.add('hidden');
+    try{ const s = JSON.parse(localStorage.getItem('supa_session') || 'null'); if(s && s.user && s.user.id) localStorage.setItem('acesso_ok', s.user.id); }catch(e){}
   }
   function apresentarOuEntrar(){
     let visto = false;
@@ -3847,6 +3866,14 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
     // se config não preenchida, vai direto pro modo offline (evita travar em demo)
     if(SUPA_URL.includes('SEU_REF')){ show('authLogin'); return; }
     await capturarRetornoOAuth();
+    // abertura imediata para quem já entrou antes; a conferência continua por trás
+    if(document.documentElement.classList.contains('retomando')){
+      const o = lerOrgSalva(); if(o) aplicarOrg(o);
+      entrarNoApp();
+      document.documentElement.dataset.conferindo = '1';
+      try{ await verificarAcesso(); } finally { delete document.documentElement.dataset.conferindo; }
+      return;
+    }
     await verificarAcesso();
   })();
 })();
