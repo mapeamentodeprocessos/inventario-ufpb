@@ -46,13 +46,49 @@
   }
   const nomeCamp = id => { const c = CAMPANHAS.find(x => x.id === id); return c ? String(c.nome).split(' · ')[0] : ''; };
   const finalidadeCamp = id => { const c = CAMPANHAS.find(x => x.id === id); const p = c ? String(c.nome).split(' · ') : []; return p.length > 1 ? p[p.length - 1] : ''; };
-  function opcoesCampanhas(sel, soAbertas){
+  /* tipos de levantamento (lista em config.js) */
+  const TIPOS = () => (window.TIPOS_LEVANTAMENTO && window.TIPOS_LEVANTAMENTO.length) ? window.TIPOS_LEVANTAMENTO : [{ nome:'Anual', desc:'' }];
+  // nomes antigos de tipo (campanhas criadas antes desta lista) → nome atual
+  const ALIAS_TIPO = { 'mudanca de gestao':'transferencia de responsabilidade', 'semestral':'semestral / periodico', 'conferencia':'conferencia por amostragem',
+    'conformidade':'auditoria / conformidade', 'tombamento inicial':'tombamento / regularizacao', 'localizacao / rastreamento':'localizacao de bens' };
+  const tipoCanon = t => { const n = norm(t || '').trim(); return ALIAS_TIPO[n] || n; };
+  const mesmoTipo = (a, b) => !!a && !!b && tipoCanon(a) === tipoCanon(b);
+  function opcoesTipos(sel){
+    const lst = TIPOS().slice();
+    if(sel && !lst.some(t => t.nome === sel)) lst.push({ nome: sel, desc: '' });
+    return '<option value="">Selecione o tipo…</option>' + lst.map(t => `<option value="${esc(t.nome)}"${t.nome === sel ? ' selected' : ''}>${esc(t.nome)}</option>`).join('');
+  }
+  const descTipo = n => { const t = TIPOS().find(x => x.nome === n); return t ? t.desc : ''; };
+  const podeCriarCampanha = () => !!(org().id && ['gestor','admin'].includes(org().papel));
+  function opcoesCampanhas(sel, soAbertas, tipo){
     const lista = CAMPANHAS.filter(c => !soAbertas || c.aberta !== false);
-    if(!lista.length) return '<option value="">Nenhuma campanha disponível (crie no painel de gestão)</option>';
-    const grupos = {};
-    lista.forEach(c => { const p = String(c.nome).split(' · '); const t = p.length > 1 ? p[p.length - 1] : 'Outras'; (grupos[t] = grupos[t] || []).push(c); });
-    return '<option value="">Selecione…</option>' + Object.keys(grupos).sort().map(t => `<optgroup label="${esc(t)}">${grupos[t].map(c =>
-      `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(String(c.nome).split(' · ')[0])}${c.aberta === false ? ' (encerrada)' : ''}</option>`).join('')}</optgroup>`).join('');
+    const doTipo = tipo ? lista.filter(c => mesmoTipo(finalidadeCampDe(c), tipo)) : [];
+    const outras = lista.filter(c => !doTipo.includes(c));
+    const op = c => `<option value="${esc(c.id)}"${c.id === sel ? ' selected' : ''}>${esc(String(c.nome).split(' · ')[0])}${finalidadeCampDe(c) && !doTipo.includes(c) ? ' · ' + esc(finalidadeCampDe(c)) : ''}${c.aberta === false ? ' (encerrada)' : ''}</option>`;
+    let h = '<option value="">' + (lista.length ? 'Selecione a campanha…' : 'Nenhuma campanha aberta') + '</option>';
+    if(doTipo.length) h += `<optgroup label="Campanhas de ${esc(tipo)}">${doTipo.map(op).join('')}</optgroup>`;
+    if(tipo && !doTipo.length && podeCriarCampanha()) h += `<option value="__nova"${sel === '__nova' ? ' selected' : ''}>＋ Criar a campanha "${esc(tipo)} ${new Date().getFullYear()}"</option>`;
+    if(outras.length) h += `<optgroup label="${tipo ? 'Outras campanhas abertas' : 'Campanhas abertas'}">${outras.map(op).join('')}</optgroup>`;
+    return h;
+  }
+  const finalidadeCampDe = c => { const p = String(c.nome).split(' · '); return p.length > 1 ? p[p.length - 1] : ''; };
+  // gestor/administrador: cria a campanha do tipo escolhido sem sair do app
+  async function criarCampanhaDoTipo(tipo){
+    const ano = new Date().getFullYear(), o = org();
+    let inv = await ui().nuvem('/rest/v1/inventarios?select=id&ano=eq.' + ano + '&org_id=eq.' + o.id + '&limit=1');
+    let invId = inv && inv[0] && inv[0].id;
+    if(!invId){
+      const novo = await ui().nuvem('/rest/v1/inventarios', { method:'POST', headers:{ Prefer:'return=representation' },
+        body: JSON.stringify([{ ano, titulo: 'Inventário ' + ano + (o.sigla ? ' — ' + o.sigla : ''), org_id: o.id }]) });
+      invId = novo && novo[0] && novo[0].id;
+    }
+    const c = await ui().nuvem('/rest/v1/campanhas', { method:'POST', headers:{ Prefer:'return=representation' },
+      body: JSON.stringify([{ inventario_id: invId, nome: tipo + ' ' + ano + ' · ' + tipo, aberta: true, org_id: o.id }]) });
+    const nova = c && c[0];
+    if(!nova || !nova.id) throw new Error('a campanha não foi criada');
+    await buscarCampanhas();
+    if(!CAMPANHAS.some(x => x.id === nova.id)) CAMPANHAS.unshift(nova);
+    return nova.id;
   }
   function ativarCampanha(id){
     if(!id) return;
@@ -331,7 +367,7 @@
         <div><b>Unidade</b> ${esc(l.unidade ? l.unidade.name + ' (' + l.unidade.code + ')' : '—')}</div>
         ${l.unidade && l.unidade.path ? `<div><b>Hierarquia</b> <small>${esc(l.unidade.path)}</small></div>` : ''}
         <div><b>Campanha</b> ${esc(l.campanhaNome || nomeCamp(l.campanhaId) || '—')}</div>
-        <div><b>Finalidade</b> ${esc(l.finalidade || '—')}</div>
+        <div><b>Tipo</b> ${esc(l.finalidade || '—')}</div>
         ${l.descricao ? `<div><b>Descrição</b> ${esc(l.descricao)}</div>` : ''}
         ${l.observacao ? `<div><b>Observação</b> ${esc(l.observacao)}</div>` : ''}
         <div><b>Comissão</b> ${l.comissao && l.comissao.length ? esc(l.comissao.map(m => m.nome + (m.funcao ? ' (' + m.funcao + ')' : '')).join('; ')) : '<i>não informada</i>'}</div>
@@ -381,11 +417,51 @@
     return `
       ${novo ? `<div class="ctl-campo"><label>Unidade *</label><input id="fUnidBusca" placeholder="Buscar pelo nome ou pelo código…" autocomplete="off"></div>
       <div id="fUnidRes" class="lv-res" style="display:none"></div><div class="ctl-dica" id="fUnidSel">${l.unidade ? '✓ ' + esc(l.unidade.name) : 'Nenhuma unidade escolhida.'}</div>` : ''}
-      <div class="ctl-campo"><label>Campanha (finalidade) *</label><select id="fCamp">${opcoesCampanhas(l.campanhaId, novo)}</select></div>
+      <div class="ctl-campo"><label>Tipo de levantamento *</label><select id="fTipo">${opcoesTipos(l.finalidade || '')}</select>
+        <div class="ctl-dica" id="fTipoDesc">${esc(descTipo(l.finalidade || ''))}</div></div>
+      <div class="ctl-campo"><label>Campanha *</label><select id="fCamp">${opcoesCampanhas(l.campanhaId, novo, l.finalidade || '')}</select>
+        <div class="ctl-dica" id="fCampDica"></div></div>
       <div class="ctl-campo"><label>Descrição</label><input id="fDesc" value="${esc(l.descricao || '')}" maxlength="500" placeholder="Ex.: Inventário anual dos bens do bloco administrativo"></div>
       <div class="ctl-campo"><label>Observação</label><textarea id="fObs" rows="2" maxlength="500">${esc(l.observacao || '')}</textarea></div>
       <div class="ctl-campo"><label>Comissão de inventário (opcional)</label>
         ${com.map((m, i) => `<div style="display:flex;gap:6px;margin-bottom:6px"><input id="fCm${i}" value="${esc(m.nome || '')}" placeholder="Nome${i === 0 ? ' do presidente' : ''}" style="flex:2"><input id="fCf${i}" value="${esc(m.funcao || (i === 0 && !m.nome ? '' : ''))}" placeholder="${i === 0 ? 'Presidente' : 'Membro'}" style="flex:1"></div>`).join('')}</div>`;
+  }
+  function ligarTipo(l, soAbertas){
+    const t = $('fTipo'), c = $('fCamp'), d = $('fTipoDesc'), dc = $('fCampDica');
+    const atualizar = manterCamp => {
+      const tipo = t.value, atual = manterCamp ? c.value : '';
+      d.textContent = descTipo(tipo);
+      c.innerHTML = opcoesCampanhas(atual, soAbertas, tipo);
+      // escolhe sozinha a campanha quando só há uma do tipo
+      if(!c.value){ const doTipo = [...c.querySelectorAll('optgroup:first-of-type option')]; if(tipo && doTipo.length === 1 && /^Campanhas de/.test(doTipo[0].parentNode.label)) c.value = doTipo[0].value; }
+      if(!c.value && tipo && c.querySelector('option[value="__nova"]')) c.value = '__nova';
+      dicaCamp();
+    };
+    const dicaCamp = () => {
+      const tipo = t.value;
+      dc.textContent = c.value === '__nova' ? 'A campanha será criada e aberta ao iniciar o levantamento.'
+        : (tipo && !CAMPANHAS.some(x => x.aberta !== false && mesmoTipo(finalidadeCampDe(x), tipo)) && !podeCriarCampanha()
+          ? 'Ainda não há campanha aberta deste tipo. Peça à gestão patrimonial para abrir uma, ou escolha outra campanha.' : '');
+    };
+    t.onchange = () => atualizar(false);
+    c.onchange = () => {
+      // escolheu a campanha antes do tipo: o tipo vem da campanha
+      if(!t.value && c.value && c.value !== '__nova'){
+        const cp = CAMPANHAS.find(x => x.id === c.value), fc = cp ? finalidadeCampDe(cp) : '';
+        const tp = fc && TIPOS().find(x => mesmoTipo(x.nome, fc));
+        if(tp){ t.value = tp.nome; d.textContent = descTipo(tp.nome); }
+      }
+      dicaCamp();
+    };
+    l._atualizarCamp = () => atualizar(true);
+    if(t.value) atualizar(true);
+  }
+  async function resolverCampanha(camp, tipo, msg){
+    if(camp !== '__nova') return camp;
+    if(!navigator.onLine){ msg.textContent = 'Sem internet: para criar a campanha é preciso estar conectado. Escolha uma campanha existente.'; return null; }
+    msg.textContent = 'Criando a campanha…';
+    try{ const id = await criarCampanhaDoTipo(tipo); msg.textContent = ''; return id; }
+    catch(e){ msg.textContent = 'Não foi possível criar a campanha (' + e.message + '). Peça à gestão patrimonial ou escolha outra.'; return null; }
   }
   const lerComissao = () => [0,1,2,3].map(i => ({ nome: $('fCm' + i).value.trim(), funcao: $('fCf' + i).value.trim() || (i === 0 ? 'Presidente' : 'Membro') })).filter(m => m.nome);
   function buscaUnidade(onEscolher){
@@ -412,14 +488,22 @@
       </div>
       <button class="btn btn-primary btn-full" id="fOk" type="button">Iniciar levantamento</button><div class="ctl-dica" id="fMsg"></div>`);
     buscaUnidade(u => { l.unidade = { code: u.code, name: u.name, path: u.path || '' }; $('fUnidSel').textContent = '✓ ' + u.name; });
-    if(!CAMPANHAS.length || navigator.onLine) buscarCampanhas().then(() => { const s = $('fCamp'); if(s) s.innerHTML = opcoesCampanhas(s.value || l.campanhaId, true); });
+    // tipo sugerido pela campanha ativa
+    if(l.campanhaId && !l.finalidade){ const fc = finalidadeCamp(l.campanhaId); if(fc){ const t = TIPOS().find(x => mesmoTipo(x.nome, fc)); l.finalidade = t ? t.nome : fc; $('fTipo').innerHTML = opcoesTipos(t ? t.nome : fc); } }
+    ligarTipo(l, true);
+    if(!CAMPANHAS.length || navigator.onLine) buscarCampanhas().then(() => { if($('fCamp') && l._atualizarCamp) l._atualizarCamp(); });
     $('fOk').onclick = async () => {
-      const msg = $('fMsg'), camp = $('fCamp').value;
+      const msg = $('fMsg'), tipo = $('fTipo').value;
       if(!l.unidade){ msg.textContent = 'Escolha a unidade.'; return; }
-      if(!camp){ msg.textContent = 'Escolha a campanha. Se não houver nenhuma, peça à gestão para abrir no painel.'; return; }
+      if(!tipo){ msg.textContent = 'Escolha o tipo de levantamento.'; return; }
+      if(!$('fCamp').value){ msg.textContent = 'Escolha a campanha. Se não houver nenhuma, peça à gestão para abrir no painel.'; return; }
+      $('fOk').disabled = true;
+      const camp = await resolverCampanha($('fCamp').value, tipo, msg);
+      $('fOk').disabled = false;
+      if(!camp) return;
       const existente = LEVS.find(x => x.status !== 'processado' && x.unidade && x.unidade.code === l.unidade.code && x.campanhaId === camp);
       if(existente && confirm('Já existe um levantamento em andamento desta unidade nesta campanha. Abrir o existente? (Cancelar cria outro.)')){ ui().fecharModal(); abrirLev(existente); return; }
-      const lev = novoLev({ unidade: l.unidade, campanhaId: camp, descricao: $('fDesc').value.trim(), observacao: $('fObs').value.trim(), comissao: lerComissao() });
+      const lev = novoLev({ unidade: l.unidade, campanhaId: camp, finalidade: tipo, descricao: $('fDesc').value.trim(), observacao: $('fObs').value.trim(), comissao: lerComissao() });
       ativarCampanha(camp);
       await gravar();
       const origem = (corpo.querySelector('[name="fOrig"]:checked') || {}).value;
@@ -432,12 +516,16 @@
     if(!l) return;
     ui().abrirModal('Editar levantamento', `<div class="lv-info"><b>Unidade</b> ${esc(l.unidade ? l.unidade.name : '—')}</div>` + formLev(l, false) +
       '<button class="btn btn-primary btn-full" id="fOk" type="button">Salvar</button><div class="ctl-dica" id="fMsg"></div>');
-    buscarCampanhas().then(() => { const s = $('fCamp'); if(s) s.innerHTML = opcoesCampanhas(l.campanhaId, false); });
+    ligarTipo(l, false);
+    buscarCampanhas().then(() => { if($('fCamp') && l._atualizarCamp) l._atualizarCamp(); });
     $('fOk').onclick = async () => {
-      const camp = $('fCamp').value;
-      if(!camp){ $('fMsg').textContent = 'Escolha a campanha.'; return; }
+      const tipo = $('fTipo').value;
+      if(!tipo){ $('fMsg').textContent = 'Escolha o tipo de levantamento.'; return; }
+      if(!$('fCamp').value){ $('fMsg').textContent = 'Escolha a campanha.'; return; }
+      const camp = await resolverCampanha($('fCamp').value, tipo, $('fMsg'));
+      if(!camp) return;
       const mudou = camp !== l.campanhaId;
-      Object.assign(l, { campanhaId: camp, campanhaNome: nomeCamp(camp) || l.campanhaNome, finalidade: finalidadeCamp(camp) || l.finalidade,
+      Object.assign(l, { campanhaId: camp, campanhaNome: nomeCamp(camp) || l.campanhaNome, finalidade: tipo,
         descricao: $('fDesc').value.trim(), observacao: $('fObs').value.trim(), comissao: lerComissao(), alteradoEm: new Date().toISOString() });
       if(mudou) for(const a of ambsDe(l)){ a.campanhaId = camp; await A().salvar(a); }
       await gravar(); ui().fecharModal(); renderAtual();

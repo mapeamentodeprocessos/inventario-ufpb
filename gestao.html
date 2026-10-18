@@ -322,16 +322,10 @@ tr:hover td{background:#faf9f5}
           </div>
           <div>
             <label class="lbl">Tipo de levantamento</label>
-            <select id="campTipo" class="inp">
-              <option value="Anual">Anual</option>
-              <option value="Semestral">Semestral</option>
-              <option value="Mudança de gestão">Mudança de gestão</option>
-              <option value="Conferência">Conferência</option>
-              <option value="Conformidade">Conformidade</option>
-              <option value="Desfazimento">Desfazimento</option>
-              <option value="Tombamento inicial">Tombamento inicial</option>
-              <option value="Localização / rastreamento">Localização / rastreamento</option>
-            </select>
+            <select id="campTipo" class="inp" onchange="document.getElementById('campTipoDesc').textContent=((window.TIPOS_LEVANTAMENTO||[]).find(t=>t.nome===this.value)||{}).desc||''"></select>
+            <div id="campTipoDesc" class="sub" style="margin-top:4px;font-size:12px"></div>
+            <script>(function(){ var s=document.getElementById("campTipo"), l=window.TIPOS_LEVANTAMENTO||[{nome:"Anual",desc:""}];
+              s.innerHTML=l.map(function(t){ return '<option value="'+t.nome+'">'+t.nome+'</option>'; }).join(""); s.onchange(); })();</script>
           </div>
           <div>
             <label class="lbl">Ano</label>
