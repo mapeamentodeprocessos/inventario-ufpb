@@ -2152,6 +2152,7 @@ select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--verde)
   function openAmbiente(a){
     currentAmbiente = a;
     try{ localStorage.setItem('ultimo_ambiente', String(a.id)); }catch(e){}
+    if(window.lembrarTela) window.lembrarTela({ dest:'amb', id:a.id });
     screenCollection.classList.toggle('somente-leitura', !!a.processado);
     const avisoProc = document.getElementById('avisoProcessado');
     if(avisoProc) avisoProc.style.display = a.processado ? 'block' : 'none';
@@ -3289,9 +3290,10 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
     editarAmbienteUI(a){ this.esconderTelas(); openEditAmbiente(a); },
     plantaDaUnidade: u => abrirPlantaDaUnidade(u),
     abrirTela(nome){ this.esconderTelas(); const t = { ambientes: screenAmbientes, mapa: screenMap, destinacao: screenReconecta }[nome]; if(t) t.style.display = 'block';
+      if(window.lembrarTela && (nome === 'ambientes' || nome === 'destinacao')) window.lembrarTela({ dest:nome });
       if(nome === 'ambientes'){ updateStatsHome(); renderAmbientes(ambienteSearchInput.value); } if(nome === 'destinacao') renderReconectaScreen();
       window.scrollTo({ top:0, behavior:'instant' }); },
-    voltarLista(){ this.esconderTelas(); screenAmbientes.style.display = 'block'; updateStatsHome(); renderAmbientes(ambienteSearchInput.value); window.scrollTo({ top:0, behavior:'instant' }); }
+    voltarLista(){ this.esconderTelas(); screenAmbientes.style.display = 'block'; if(window.lembrarTela) window.lembrarTela({ dest:'ambientes' }); updateStatsHome(); renderAmbientes(ambienteSearchInput.value); window.scrollTo({ top:0, behavior:'instant' }); }
   };
   // base oficial de cada organização fica guardada separada
   function chaveBase(){ return 'baseRef:' + ((window.ORG && window.ORG.id) || 'legado'); }

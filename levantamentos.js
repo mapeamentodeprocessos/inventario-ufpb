@@ -256,6 +256,10 @@
     $('baTitulo').textContent = TITULO[dest] || $('baTitulo').textContent;
   }
   function mostrar(id){ A().esconderTelas(); $(id).style.display = 'block'; window.scrollTo({ top:0, behavior:'instant' }); }
+  // tela atual: ao apertar F5 o app volta para ela (vale só nesta aba do navegador)
+  const TELAS_FIXAS = ['inicio','levantamentos','ambientes','conciliacao','transferencias','termos','historico','base','destinacao'];
+  const lembrar = t => { try{ sessionStorage.setItem('app_tela', JSON.stringify(t)); }catch(e){} };
+  window.lembrarTela = lembrar;
   async function irPara(dest){
     abrirMenu(false);
     switch(dest){
@@ -278,6 +282,7 @@
         location.reload(); return;
     }
     marcar(dest);
+    if(TELAS_FIXAS.includes(dest)) lembrar({ dest });
   }
 
   /* ---------------- tela Início ---------------- */
@@ -355,6 +360,7 @@
   function abrirLev(lev){
     if(!lev) return;
     LEV_ABERTO = lev; mostrar('screenLevantamento'); marcar('levantamentos'); $('baTitulo').textContent = 'Levantamento';
+    lembrar({ dest: 'lev', id: lev.id });
     renderDetalhe();
   }
   function renderDetalhe(){
@@ -405,7 +411,7 @@
     on('dEditar', () => editarLev(l)); on('dExcluir', () => excluirLev(l));
     $('dAmbs').querySelectorAll('[data-id]').forEach(row => {
       const a = () => A().todos().find(x => String(x.id) === row.dataset.id);
-      row.querySelector('[data-abre]').onclick = () => { veioDoLev = true; A().esconderTelas(); A().abrir(a()); };
+      row.querySelector('[data-abre]').onclick = () => { veioDoLev = true; A().esconderTelas(); A().abrir(a()); if(LEV_ABERTO) lembrar({ dest:'amb', id:a().id, lev:LEV_ABERTO.id }); };
       const ed = row.querySelector('[data-ed]'); if(ed) ed.onclick = () => A().editarAmbienteUI(a());
       const ex = row.querySelector('[data-ex]'); if(ex) ex.onclick = () => excluirAmbiente(a());
     });
@@ -844,8 +850,16 @@
       await carregar();
       await garantirVinculos();
       atualizarCabecalho();
-      // a tela inicial passa a ser o Início, a menos que o app tenha reaberto um ambiente
-      if($('screenAmbientes').style.display !== 'none' && $('screenCollection').style.display !== 'block') irPara('inicio');
+      // F5: volta para a tela em que estava; senão, Início (a menos que o app tenha reaberto um ambiente)
+      if($('screenCollection').style.display === 'block') return navigator.onLine && buscarCampanhas();
+      let t = null; try{ t = JSON.parse(sessionStorage.getItem('app_tela') || 'null'); }catch(e){}
+      let ok = false;
+      try{
+        if(t && t.dest === 'lev'){ const l = LEVS.find(x => x.id === t.id); if(l){ abrirLev(l); ok = true; } }
+        else if(t && t.dest === 'amb'){ const a = A().todos().find(x => String(x.id) === String(t.id)); if(a){ A().esconderTelas(); A().abrir(a); const l = t.lev && LEVS.find(x => x.id === t.lev); if(l){ LEV_ABERTO = l; veioDoLev = true; lembrar(t); } ok = true; } }
+        else if(t && TELAS_FIXAS.includes(t.dest)){ await irPara(t.dest); ok = true; }
+      }catch(e){ ok = false; }
+      if(!ok) irPara('inicio');
       if(navigator.onLine) buscarCampanhas();
     }
   };

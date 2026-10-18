@@ -172,9 +172,23 @@ tr:hover td{background:#faf9f5}
 .arvore div{padding:2px 0;white-space:nowrap}
 .arvore code{font-family:var(--mono);font-size:11.5px;color:var(--ambar-2);margin-right:6px}
 .arvore:empty{display:none}
+html.retomando #telaLogin{display:none !important}
+#abrindoPainel{display:none;position:fixed;inset:0;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8a887f;background:var(--papel,#f6f3ec)}
+html.retomando #abrindoPainel{display:flex}
+#abrindoPainel i{width:28px;height:28px;border:3px solid rgba(26,71,49,.15);border-top-color:#1A4731;border-radius:50%;animation:giraP .8s linear infinite}
+@keyframes giraP{to{transform:rotate(360deg)}}
 </style>
+<script>
+/* já entrou antes neste aparelho: não mostra a tela de login enquanto confere o acesso */
+(function(){ try{
+  var g = JSON.parse(localStorage.getItem("gestao_session")||"null"), a = JSON.parse(localStorage.getItem("supa_session")||"null");
+  if((g && g.access_token) || (a && a.access_token && sessionStorage.getItem("gestao_saiu") !== "1") || location.hash.indexOf("access_token") >= 0)
+    document.documentElement.classList.add("retomando");
+}catch(e){} })();
+</script>
 </head>
 <body>
+<div id="abrindoPainel"><i></i>Abrindo o painel…</div>
 
 <!-- ===== TELA DE LOGIN ===== -->
 <div id="telaLogin" class="login capa">
@@ -385,7 +399,7 @@ async function papelNaOrg(claims){
 }
 function trocarOrg(id){
   const o = ORGS.find(x => x.id === id); if(!o) return;
-  try{ localStorage.setItem("gestao_org", id); }catch(e){}
+  try{ localStorage.setItem("gestao_org", id); const c = lerJSON("gestao_cache"); if(c){ c.orgId = id; c.papel = o.papel; localStorage.setItem("gestao_cache", JSON.stringify(c)); } }catch(e){}
   location.reload();
 }
 
@@ -450,7 +464,7 @@ function renovarGestao(){
 }
 function sairGestao(){
   if(!confirm("Sair do painel de gestão?")) return;
-  localStorage.removeItem("gestao_session"); sessionStorage.setItem("gestao_saiu", "1");
+  localStorage.removeItem("gestao_session"); localStorage.removeItem("gestao_cache"); sessionStorage.setItem("gestao_saiu", "1");
   location.href = location.pathname;
 }
 function jwtClaims(t){ try{ let p = t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"); while(p.length % 4) p += "="; return JSON.parse(decodeURIComponent(escape(atob(p)))); }catch{ return {}; } }
@@ -473,6 +487,7 @@ async function entrar(){
     if(!papel || !PAPEIS_GESTAO.includes(papel)){
       err.textContent="Seu acesso não permite o módulo de gestão."; SESSION=null; return;
     }
+    guardarCache(papel);
     abrirApp(papel);
   }catch(e){ err.textContent="E-mail ou senha inválidos."; }
 }
@@ -491,6 +506,10 @@ function abrirApp(papel){
     if(ORGS.length > 1){ sel.style.display = "block"; sel.innerHTML = ORGS.map(o => `<option value="${o.id}"${o.id===ORG.id?" selected":""}>${esc(o.sigla || o.nome)}</option>`).join(""); }
     document.querySelectorAll("[data-org-sistema]").forEach(e => e.textContent = ORG.sistema_origem || "base oficial");
   }
+  // volta para a aba em que estava (F5 ou voltando do app)
+  let abaSalva = null; try{ abaSalva = localStorage.getItem("gestao_aba"); }catch(e){}
+  const bt = abaSalva && document.querySelector('.abas button[data-sec="' + abaSalva + '"]');
+  if(bt && bt.style.display !== "none" && !bt.classList.contains("on")) aba(bt);
   popularFiltros().then(carregar).catch(e => console.warn(e));
 }
 
@@ -501,6 +520,7 @@ function aba(btn){
   btn.classList.add("on");
   document.querySelectorAll(".secao").forEach(s=>s.classList.remove("on"));
   document.getElementById("sec-"+btn.dataset.sec).classList.add("on");
+  try{ localStorage.setItem("gestao_aba", btn.dataset.sec); }catch(e){}
   if(btn.dataset.sec==="admin") carregarAdmin();
   if(btn.dataset.sec==="controle") carregarControle();
 }
@@ -514,6 +534,8 @@ async function popularFiltros(){
   DADOS.campanhas = camps;
   const fCamp=document.getElementById("fCamp");
   fCamp.innerHTML = camps.map(c=>`<option value="${c.id}">${c.nome}</option>`).join("");
+  try{ const sv = JSON.parse(localStorage.getItem("gestao_filtro:" + ((ORG && ORG.id) || "")) || "null");
+    if(sv){ if(sv.inv && [...fInv.options].some(o => o.value === sv.inv)) fInv.value = sv.inv; if(sv.camp && [...fCamp.options].some(o => o.value === sv.camp)) fCamp.value = sv.camp; } }catch(e){}
   const fUnid=document.getElementById("fUnid");
   const unids=[...new Set((CONFIG.DEMO_MODE?DEMO.progresso:[]).map(p=>p.unidade))];
   fUnid.innerHTML='<option value="">Todas</option>'+unids.map(u=>`<option>${u}</option>`).join("");
@@ -530,10 +552,10 @@ async function carregar(){
                          : { p:"vw_progresso_unidade", d:"vw_divergencias_sipac", c:"vw_conservacao", r:"vw_produtividade_coletor" };
     const ler = async (nova, antiga) => { try{ return await sb(`/rest/v1/${nova}?campanha_id=eq.${camp}&select=*`); }
       catch(e){ if(nova === antiga) throw e; return await sb(`/rest/v1/${antiga}?campanha_id=eq.${camp}&select=*`).catch(() => []); } };
-    DADOS.progresso = await ler(v.p, "vw_progresso_unidade");
-    DADOS.div       = await ler(v.d, "vw_divergencias_sipac");
-    DADOS.conserva  = await ler(v.c, "vw_conservacao");
-    DADOS.prod      = await ler(v.r, "vw_produtividade_coletor");
+    try{ localStorage.setItem("gestao_filtro:" + ((ORG && ORG.id) || ""), JSON.stringify({ inv: document.getElementById("fInv").value, camp })); }catch(e){}
+    // as quatro consultas vão juntas (antes iam uma depois da outra)
+    [DADOS.progresso, DADOS.div, DADOS.conserva, DADOS.prod] = await Promise.all([
+      ler(v.p, "vw_progresso_unidade"), ler(v.d, "vw_divergencias_sipac"), ler(v.c, "vw_conservacao"), ler(v.r, "vw_produtividade_coletor") ]);
   }
   renderPainel(); renderDivergencias(); renderConservacao(); renderProdutividade();
 }
@@ -979,7 +1001,7 @@ function entrarGoogle(){
 }
 async function checarSessaoGoogle(){
   const err = document.getElementById("erroLogin");
-  if(CONFIG.DEMO_MODE) return;
+  if(CONFIG.DEMO_MODE){ document.documentElement.classList.remove("retomando"); return; }
   // 1) retorno do OAuth vem no #fragmento
   let token = null, refresh = null;
   if(location.hash.includes("access_token")){
@@ -992,7 +1014,21 @@ async function checarSessaoGoogle(){
     const s = sessaoGuardada();
     if(s){ token = s.access_token; refresh = s.refresh_token || null; }
   }
-  if(!token) return; // sem sessão: fica na tela de login
+  const mostrarLogin = () => document.documentElement.classList.remove("retomando");
+  if(!token){ mostrarLogin(); return; } // sem sessão: fica na tela de login
+  // abertura imediata: usa o que foi conferido da última vez e confere de novo em segundo plano
+  const cache = lerJSON("gestao_cache"), sub = jwtClaims(token).sub;
+  if(cache && sub && cache.sub === sub && cache.papel && PAPEIS_GESTAO.includes(cache.papel) && !tokenVencido(token)){
+    SESSION = { access_token: token, refresh_token: refresh };
+    PERFIL = cache.perfil; ORGS = cache.orgs || []; MODELO_ORG = !!cache.modelo;
+    ORG = ORGS.find(o => o.id === cache.orgId) || ORGS[0] || null;
+    abrirApp(cache.papel); mostrarLogin();
+    revalidarAcesso(token).then(papel => {
+      if(!papel){ localStorage.removeItem("gestao_cache"); location.reload(); return; }
+      if(papel !== cache.papel || (ORG && ORG.id) !== cache.orgId) location.reload();
+    }).catch(() => {});
+    return;
+  }
   try{
     SESSION = { access_token: token, refresh_token: refresh };
     // acesso vencido (passou de 1 hora): renova antes de abrir, sem pedir login
@@ -1009,10 +1045,25 @@ async function checarSessaoGoogle(){
       if(err) err.textContent = MODELO_ORG
         ? "Sua conta não é supervisora, gestora nem administradora de nenhuma organização. Peça ao administrador para ajustar seu papel, ou crie uma organização pelo app de campo."
         : "Sua conta não tem acesso ao módulo de gestão. Fale com o administrador.";
-      SESSION = null; localStorage.removeItem("gestao_session"); return;
+      SESSION = null; localStorage.removeItem("gestao_session"); localStorage.removeItem("gestao_cache"); mostrarLogin(); return;
     }
-    abrirApp(papel);
-  }catch(e){ if(err) err.textContent = "Falha ao verificar acesso: " + e.message; }
+    guardarCache(papel);
+    abrirApp(papel); mostrarLogin();
+  }catch(e){ mostrarLogin(); if(err) err.textContent = "Falha ao verificar acesso: " + e.message; }
+}
+function guardarCache(papel){
+  try{ localStorage.setItem("gestao_cache", JSON.stringify({ sub: jwtClaims(SESSION.access_token).sub, perfil: PERFIL, orgs: ORGS, orgId: ORG && ORG.id, papel, modelo: MODELO_ORG })); }catch(e){}
+}
+// confere de novo perfil e papel (pode ter mudado desde a última vez); devolve o papel ou null
+async function revalidarAcesso(token){
+  const claims = jwtClaims(token);
+  const perfis = await sb(`/rest/v1/profiles?id=eq.${claims.sub}&select=*`);
+  const ant = { orgs: ORGS, org: ORG };
+  PERFIL = perfis[0] || PERFIL;
+  const papel = await papelNaOrg(claims);
+  if(!papel || !PAPEIS_GESTAO.includes(papel)) return null;
+  guardarCache(papel);
+  return papel;
 }
 
 try{ if(typeof checarSessaoGoogle==="function"){ if(document.readyState!=="loading") checarSessaoGoogle(); else document.addEventListener("DOMContentLoaded", checarSessaoGoogle); } }catch(_){}
