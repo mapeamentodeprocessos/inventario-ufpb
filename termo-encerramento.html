@@ -66,7 +66,7 @@ tr.total td{border-top:2px solid var(--verde);font-weight:700;background:var(--p
 .assin .risco{border-top:1px solid var(--tinta);margin:0 12px 6px;padding-top:6px}
 .assin .nome{font-size:13px;font-weight:600}
 .assin .cargo{font-size:11px;color:var(--tinta-2)}
-.assin .siape{font-family:var(--mono);font-size:10px;color:var(--tinta-3);margin-top:2px}
+.assin .mat{font-family:var(--mono);font-size:10px;color:var(--tinta-3);margin-top:2px}
 .local-data{text-align:right;font-size:13px;margin:36px 0 8px;color:var(--tinta-2)}
 .rodape{margin-top:40px;padding-top:14px;border-top:1px solid var(--linha);font-size:10.5px;color:var(--tinta-3);text-align:center;line-height:1.6}
 
@@ -83,36 +83,36 @@ tr.total td{border-top:2px solid var(--verde);font-weight:700;background:var(--p
 <body>
 
 <div class="barra-acao">
-  <span class="t">Termo de Encerramento de Inventário</span>
+  <span class="t">Termo de Encerramento de Inventário · <b>modelo ilustrativo</b> (o termo real é gerado pelo app, em Conciliação e controle)</span>
   <button onclick="window.print()">Imprimir / Salvar em PDF</button>
 </div>
 
 <div class="folha">
   <div class="cab">
-    <div class="brasao">UFPB</div>
-    <h1>Universidade Federal da Paraíba</h1>
-    <p>Pró-Reitoria de Administração · Divisão de Patrimônio (DIPA)</p>
+    <div class="brasao">PME</div>
+    <h1>Prefeitura Municipal de Exemplo</h1>
+    <p>Secretaria de Administração · Departamento de Patrimônio</p>
     <div class="doc-titulo">Termo de Encerramento de Inventário</div>
-    <div class="doc-num">Nº 001/2026 · Campanha CCEN — 1º semestre</div>
+    <div class="doc-num">Nº 001/2026 · Campanha Secretaria de Educação — 1º semestre</div>
   </div>
 
   <div class="meta">
     <div><div class="rot">Inventário</div><div class="val">Inventário Geral 2026</div></div>
-    <div><div class="rot">Unidade / centro</div><div class="val">CCEN — Centro de Ciências Exatas e da Natureza</div></div>
+    <div><div class="rot">Unidade / centro</div><div class="val">Secretaria Municipal de Educação</div></div>
     <div><div class="rot">Período de coleta</div><div class="val">14/07/2026 a 05/08/2026</div></div>
     <div><div class="rot">Data de encerramento</div><div class="val">08/08/2026</div></div>
-    <div><div class="rot">Base confrontada</div><div class="val">Extração SIPAC de 12/07/2026</div></div>
+    <div><div class="rot">Base confrontada</div><div class="val">Extração do sistema patrimonial de 12/07/2026</div></div>
     <div><div class="rot">Bens esperados (base)</div><div class="val">2.140</div></div>
   </div>
 
-  <p class="corpo">Aos oito dias do mês de agosto de dois mil e vinte e seis, a Subcomissão de Inventário designada para o levantamento patrimonial da unidade acima identificada declara encerrado o inventário da campanha em referência, tendo confrontado a base de bens extraída do Sistema Integrado de Patrimônio, Administração e Contratos (SIPAC) com o levantamento físico realizado em campo, na forma da NBC TSP 07, da Instrução Normativa SEDAP nº 205/1988 e da Lei nº 4.320/1964, apurando os seguintes resultados.</p>
+  <p class="corpo">Aos oito dias do mês de agosto de dois mil e vinte e seis, a Subcomissão de Inventário designada para o levantamento patrimonial da unidade acima identificada declara encerrado o inventário da campanha em referência, tendo confrontado a base de bens extraída do sistema patrimonial da organização com o levantamento físico realizado em campo, na forma da NBC TSP 07, da Instrução Normativa SEDAP nº 205/1988 e da Lei nº 4.320/1964, apurando os seguintes resultados.</p>
 
   <h2 class="sec">1. Quadro-resumo da reconciliação</h2>
   <table>
     <thead><tr><th>Categoria</th><th style="text-align:right">Quantidade</th><th>Providência requerida</th></tr></thead>
     <tbody>
       <tr><td><span class="cat"><span class="dot v"></span>Bens conformes</span></td><td class="n">1.837</td><td class="acao-req">Nenhuma — localizado na unidade prevista</td></tr>
-      <tr><td><span class="cat"><span class="dot az"></span>Divergência de localização</span></td><td class="n">45</td><td class="acao-req">Regularizar transferência no SIPAC</td></tr>
+      <tr><td><span class="cat"><span class="dot az"></span>Divergência de localização</span></td><td class="n">45</td><td class="acao-req">Regularizar transferência no sistema patrimonial</td></tr>
       <tr><td><span class="cat"><span class="dot vm"></span>Não localizados</span></td><td class="n">129</td><td class="acao-req">Abrir apuração de possível extravio</td></tr>
       <tr><td><span class="cat"><span class="dot am"></span>Não cadastrados</span></td><td class="n">38</td><td class="acao-req">Incorporar / promover tombamento</td></tr>
       <tr><td><span class="cat"><span class="dot ci"></span>Sem plaqueta</span></td><td class="n">22</td><td class="acao-req">Providenciar plaquetamento</td></tr>
@@ -125,9 +125,9 @@ tr.total td{border-top:2px solid var(--verde);font-weight:700;background:var(--p
   <table class="deteff">
     <thead><tr><th>Plaqueta</th><th>Descrição</th><th>Unidade (base)</th></tr></thead>
     <tbody>
-      <tr><td class="plq">000.301.884-2</td><td>Microcomputador desktop</td><td>CCEN / Depto. Informática</td></tr>
-      <tr><td class="plq">000.298.117-0</td><td>Projetor multimídia</td><td>CCEN / Depto. Matemática</td></tr>
-      <tr><td class="plq">000.155.620-9</td><td>Impressora laser monocromática</td><td>CCEN / Secretaria</td></tr>
+      <tr><td class="plq">000.301.884-2</td><td>Microcomputador desktop</td><td>Educação / Núcleo de Tecnologia</td></tr>
+      <tr><td class="plq">000.298.117-0</td><td>Projetor multimídia</td><td>Educação / Escola Municipal Centro</td></tr>
+      <tr><td class="plq">000.155.620-9</td><td>Impressora laser monocromática</td><td>Educação / Gabinete</td></tr>
       <tr><td colspan="3" style="color:var(--tinta-3);font-style:italic">… e outros 126 itens listados no anexo I (gerado automaticamente do sistema).</td></tr>
     </tbody>
   </table>
@@ -136,13 +136,13 @@ tr.total td{border-top:2px solid var(--verde);font-weight:700;background:var(--p
   <div class="trilha">Levantamento executado por <b>4 agentes patrimoniais</b>: Ana Ribeiro, Carlos Menezes, Juliana Alves e Marcos Tavares. Total de <b>151 ambientes</b> coletados, com registro fotográfico e horário de cada verificação preservados no log de auditoria imutável do sistema.</div>
   <div class="trilha">Registro de auditoria: base importada em <b>12/07/2026</b>; primeira coleta em <b>14/07/2026</b>; encerramento e congelamento do resultado em <b>08/08/2026</b>. A partir do encerramento, os dados desta campanha tornaram-se somente-leitura.</div>
 
-  <div class="local-data">João Pessoa, 08 de agosto de 2026.</div>
+  <div class="local-data">Cidade, 08 de agosto de 2026.</div>
 
   <div class="assinaturas">
-    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Presidente da Subcomissão de Inventário</div><div class="siape">SIAPE ___________</div></div>
-    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Membro da Subcomissão</div><div class="siape">SIAPE ___________</div></div>
-    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Membro da Subcomissão</div><div class="siape">SIAPE ___________</div></div>
-    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Gestor de Patrimônio da Unidade</div><div class="siape">SIAPE ___________</div></div>
+    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Presidente da Subcomissão de Inventário</div><div class="mat">Matrícula ___________</div></div>
+    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Membro da Subcomissão</div><div class="mat">Matrícula ___________</div></div>
+    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Membro da Subcomissão</div><div class="mat">Matrícula ___________</div></div>
+    <div class="assin"><div class="risco"></div><div class="nome">_______________________</div><div class="cargo">Gestor de Patrimônio da Unidade</div><div class="mat">Matrícula ___________</div></div>
   </div>
 
   <div class="rodape">

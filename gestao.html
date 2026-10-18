@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestão — Levantamento Patrimonial</title>
+<script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -161,6 +162,16 @@ tr:hover td{background:#faf9f5}
 
 #telaLogin.capa, .login.capa{max-width:none !important;margin:0 !important;background:#f2efe6 !important;border:0 !important;border-radius:0 !important;padding:0 !important;box-shadow:none !important;position:fixed;inset:0;overflow-y:auto;z-index:50}
 .login.capa .lp-hero{min-height:100vh}
+
+.grade2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+@media(max-width:640px){.grade2{grid-template-columns:1fr}}
+.convite{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--linha)}
+.convite .codigo{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:4px;color:var(--verde)}
+.convite-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.arvore{margin-top:12px;max-height:340px;overflow:auto;border:1px solid var(--linha);border-radius:10px;padding:8px 12px;font-size:13px;background:var(--papel)}
+.arvore div{padding:2px 0;white-space:nowrap}
+.arvore code{font-family:var(--mono);font-size:11.5px;color:var(--ambar-2);margin-right:6px}
+.arvore:empty{display:none}
 </style>
 </head>
 <body>
@@ -168,11 +179,11 @@ tr:hover td{background:#faf9f5}
 <!-- ===== TELA DE LOGIN ===== -->
 <div id="telaLogin" class="login capa">
   <div class="lp-hero">
-    <div class="lp-top"><span class="lp-plaq">UFPB · PRA</span><span class="lp-org">Divisão de Patrimônio · DIPA</span></div>
+    <div class="lp-top"><span class="lp-plaq" data-marca="nome">Levantamento Patrimonial</span><span class="lp-org">Para organizações públicas e privadas</span></div>
     <div class="lp-txt">
       <div class="lp-eyebrow">Painel de gestão patrimonial</div>
       <h1 class="lp-title">Gestão do<br><em>Inventário</em></h1>
-      <p class="lp-sub">Acompanhe o andamento do levantamento, aprove os acessos, crie campanhas e visualize os indicadores. Acesso restrito a supervisores, gestores e administradores.</p>
+      <p class="lp-sub">Acompanhe o andamento do levantamento, crie campanhas, monte a estrutura da organização, convide a equipe e veja os indicadores. Acesso para supervisores, gestores e administradores.</p>
       <button class="lp-cta" onclick="entrarGoogle()" style="background:#1A4731">
         <svg viewBox="0 0 48 48" width="20" height="20" style="background:#fff;border-radius:3px;padding:1px"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.8-6.8C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.3 13.6 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.5 0 20.1 0 24s1 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.1-5.5c-2 1.3-4.5 2.1-8.8 2.1-6.4 0-11.7-4.1-13.6-9.7l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>
         Entrar com Google
@@ -198,14 +209,15 @@ tr:hover td{background:#faf9f5}
 <!-- ===== APP ===== -->
 <div id="app" style="display:none">
   <div class="topo">
-    <div class="marca">Levantamento Patrimonial<small>Módulo de gestão</small></div>
-    <div class="quem"><b id="quemNome">—</b><span id="quemEmail"></span><span class="papel-tag" id="quemPapel"></span></div>
+    <div class="marca"><span data-marca="nome">Levantamento Patrimonial</span><small id="topoOrg">Módulo de gestão</small></div>
+    <div class="quem"><b id="quemNome">—</b><span id="quemEmail"></span><span class="papel-tag" id="quemPapel"></span><select id="trocaOrg" onchange="trocarOrg(this.value)" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;border:0;font-size:12px;max-width:220px"></select></div>
   </div>
   <div class="abas">
     <button class="on" data-sec="painel" onclick="aba(this)">Painel</button>
-    <button data-sec="divergencias" onclick="aba(this)">Divergências SIPAC</button>
+    <button data-sec="divergencias" onclick="aba(this)">Divergências</button>
     <button data-sec="conservacao" onclick="aba(this)">Conservação</button>
     <button data-sec="produtividade" onclick="aba(this)">Produtividade</button>
+    <button data-sec="controle" id="abaControle" onclick="aba(this)" style="display:none">Termos e movimentações</button>
     <button data-sec="admin" id="abaAdmin" onclick="aba(this)" style="display:none">Administração</button>
   </div>
 
@@ -213,7 +225,7 @@ tr:hover td{background:#faf9f5}
     <div class="filtros">
       <div class="campo"><label>Inventário</label><select id="fInv" onchange="carregar()"></select></div>
       <div class="campo"><label>Campanha</label><select id="fCamp" onchange="carregar()"></select></div>
-      <div class="campo"><label>Centro / unidade</label><select id="fUnid" onchange="carregar()"><option value="">Todas</option></select></div>
+      <div class="campo"><label>Unidade</label><select id="fUnid" onchange="carregar()"><option value="">Todas</option></select></div>
     </div>
 
     <!-- PAINEL -->
@@ -239,7 +251,7 @@ tr:hover td{background:#faf9f5}
       <div class="acoes"><button class="btn mini" onclick="exportar('conservacao')">Exportar CSV</button></div>
       <div class="paineis">
         <div class="painel"><h3>Estado de conservação</h3><p class="sub">Consolidado da campanha selecionada</p><canvas id="chConserva"></canvas></div>
-        <div class="painel"><h3>Bens inservíveis por unidade</h3><p class="sub">Candidatos a desfazimento / ReConecta</p><div id="tabConserva" style="max-height:260px;overflow:auto"></div></div>
+        <div class="painel"><h3>Bens inservíveis por unidade</h3><p class="sub">Candidatos a desfazimento / destinação</p><div id="tabConserva" style="max-height:260px;overflow:auto"></div></div>
       </div>
     </section>
 
@@ -249,15 +261,64 @@ tr:hover td{background:#faf9f5}
       <div class="painel"><h3>Produtividade por coletor</h3><p class="sub">Ambientes e itens confirmados no período</p><div id="tabProd"></div></div>
     </section>
 
+    <!-- CONTROLE: termos, transferências e histórico enviados pelos aparelhos -->
+    <section class="secao" id="sec-controle">
+      <div class="indicadores" id="indCtl"></div>
+      <div class="acoes"><select id="ctlTipo" class="inp" style="width:auto;padding:6px 10px;font-size:12.5px" onchange="carregarControle()">
+        <option value="termo">Termos de responsabilidade</option><option value="transferencia">Transferências</option><option value="auditoria">Histórico de alterações</option></select>
+        <input id="ctlBusca" class="inp" style="width:auto;flex:1;min-width:180px;padding:6px 10px;font-size:12.5px" placeholder="Filtrar por plaqueta, pessoa, ambiente…" oninput="renderControle()">
+        <button class="btn mini" onclick="exportarControle()">Exportar CSV</button></div>
+      <div class="painel"><div id="tabCtl"></div></div>
+    </section>
+
     <!-- ADMINISTRAÇÃO -->
     <section class="secao" id="sec-admin">
+      <div class="painel org-bloco" id="orgPainel" style="display:none;margin-bottom:18px">
+        <h3>Organização</h3>
+        <p class="sub">Esses dados aparecem no app, nos termos e nos relatórios.</p>
+        <div class="grade2">
+          <div style="grid-column:1/-1"><label class="lbl">Nome</label><input id="oNome" class="inp"></div>
+          <div><label class="lbl">Sigla</label><input id="oSigla" class="inp" maxlength="16"></div>
+          <div><label class="lbl">Tipo</label><select id="oTipo" class="inp"><option value="publica">Órgão ou entidade pública</option><option value="privada">Empresa privada</option><option value="terceiro_setor">Terceiro setor</option></select></div>
+          <div><label class="lbl">Sistema patrimonial de origem</label><input id="oSistema" class="inp" placeholder="SIPAC, SIADS, TOTVS, SAP, planilha…"></div>
+          <div><label class="lbl">Como chamam a unidade</label><input id="oRotUnid" class="inp" placeholder="Unidade, setor, secretaria, filial…"></div>
+          <div><label class="lbl">Como chamam a matrícula</label><input id="oRotMat" class="inp" placeholder="Matrícula, SIAPE, crachá…"></div>
+          <div><label class="lbl">Programa de destinação de inservíveis</label><input id="oDest" class="inp"></div>
+        </div>
+        <button class="btn pri" style="margin-top:12px" onclick="salvarOrg()">Salvar dados</button>
+        <span id="oMsg" class="sub" style="margin-left:10px"></span>
+        <div class="convite">
+          <div><label class="lbl">Código de convite da equipe</label><div class="codigo" id="oCodigo">—</div>
+          <p class="sub">Quem entra no app com este código vira coletor desta organização. Ajuste o papel em Membros.</p></div>
+          <div class="convite-acoes"><button class="btn mini" onclick="copiarConvite()">Copiar link de convite</button><button class="btn mini" onclick="novoConvite()">Gerar novo código</button></div>
+        </div>
+      </div>
+      <div class="painel org-bloco" id="estruturaPainel" style="display:none;margin-bottom:18px">
+        <h3>Estrutura organizacional</h3>
+        <p class="sub">Unidades, setores, secretarias ou filiais. Os ambientes físicos são criados dentro delas, no app.</p>
+        <div id="eResumo" class="sub" style="margin:8px 0"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn mini pri" onclick="document.getElementById('eArq').click()">Importar planilha (Excel ou CSV)</button>
+          <input type="file" id="eArq" accept=".csv,.xlsx,.xls,.ods" style="display:none" onchange="importarEstrutura(this.files[0]);this.value=''">
+          <button class="btn mini" onclick="baixarModeloEstrutura()">Baixar planilha modelo</button>
+          <select id="eModelo" class="inp" style="width:auto;padding:6px 10px;font-size:12.5px"><option value="">Começar de um modelo pronto…</option><option value="prefeitura">Prefeitura</option><option value="universidade">Universidade ou instituto federal</option><option value="empresa">Empresa</option><option value="hospital">Hospital</option><option value="escola">Escola</option><option value="tribunal">Tribunal ou órgão de controle</option></select>
+          <button class="btn mini" onclick="aplicarModeloEstrutura()">Aplicar modelo</button>
+        </div>
+        <p class="sub" style="margin-top:8px">Planilha com as colunas <b>código</b>, <b>nome</b> e <b>código da unidade superior</b> (ou códigos com pontos, como 01.02.03, que já dizem quem é a superior).</p>
+        <div id="eArvore" class="arvore"></div>
+      </div>
+      <div class="painel org-bloco" id="membrosPainel" style="display:none;margin-bottom:18px">
+        <h3>Membros</h3>
+        <p class="sub">Coletor lança os bens; supervisor acompanha; gestor cria campanhas e estrutura; administrador cuida de tudo, inclusive dos membros.</p>
+        <div id="tabMembros"></div>
+      </div>
       <div class="painel" style="margin-bottom:18px">
         <h3>Criar campanha</h3>
         <p class="sub">A campanha é o exercício de levantamento (o período de trabalho). Os coletores escolhem uma campanha aberta ao entrar.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
           <div style="grid-column:1/-1">
             <label class="lbl">Nome da campanha</label>
-            <input id="campNome" class="inp" placeholder="Ex.: Inventário Anual 2026 — CCEN">
+            <input id="campNome" class="inp" placeholder="Ex.: Inventário Anual 2026 — Secretaria de Saúde">
           </div>
           <div>
             <label class="lbl">Tipo de levantamento</label>
@@ -281,9 +342,9 @@ tr:hover td{background:#faf9f5}
         <div id="campMsg" class="sub" style="margin-top:8px"></div>
         <div id="campLista" style="margin-top:14px"></div>
       </div>
-      <div class="aviso">Novos usuários se cadastram pelo app e entram como <b style="display:inline">pendentes</b>, sem acesso a dados. Aprove abaixo, atribua o papel e a unidade de escopo. O papel só passa a valer no próximo login do usuário.</div>
-      <div class="painel"><h3>Solicitações de acesso pendentes</h3><p class="sub">Aprovar gera o acesso e define o que a pessoa enxerga</p><div id="tabPendentes"></div></div>
-      <div class="painel" style="margin-top:18px"><h3>Usuários ativos</h3><p class="sub">Ajuste papel ou desative acesso</p><div id="tabAtivos"></div></div>
+      <div class="aviso" id="avisoLegado">Novos usuários se cadastram pelo app e entram como <b style="display:inline">pendentes</b>, sem acesso a dados. Aprove abaixo, atribua o papel e a unidade de escopo. O papel só passa a valer no próximo login do usuário.</div>
+      <div class="painel" id="painelPendentes"><h3>Solicitações de acesso pendentes</h3><p class="sub">Aprovar gera o acesso e define o que a pessoa enxerga</p><div id="tabPendentes"></div></div>
+      <div class="painel" id="painelAtivos" style="margin-top:18px"><h3>Usuários ativos</h3><p class="sub">Ajuste papel ou desative acesso</p><div id="tabAtivos"></div></div>
     </section>
   </div>
 </div>
@@ -301,6 +362,38 @@ const CONFIG = {
 };
 
 let SESSION = null, PERFIL = null, CHARTS = {}, DADOS = {};
+/* Organização ativa. MODELO_ORG=false quando o banco ainda não recebeu a
+   migração de várias organizações (aí tudo funciona como antes). */
+let ORG = null, ORGS = [], MODELO_ORG = false;
+const PAPEIS_GESTAO = ["supervisor","gestor","admin"];
+const filtroOrg = (pref) => (ORG && ORG.id) ? (pref || "&") + "org_id=eq." + ORG.id : "";
+async function resolverOrgs(uid){
+  try{
+    const ms = await sb(`/rest/v1/membros?user_id=eq.${uid}&ativo=eq.true&select=papel,organizacoes(*)`);
+    MODELO_ORG = true;
+    ORGS = (ms||[]).filter(m => m.organizacoes).map(m => Object.assign({}, m.organizacoes, { papel: m.papel }));
+    return ORGS;
+  }catch(e){
+    if(/PGRST20|42P01|does not exist|schema cache|Could not find/i.test(String(e.message))){ MODELO_ORG = false; return null; }
+    throw e;
+  }
+}
+/* decide organização e papel depois do login; devolve o papel ou null */
+async function papelNaOrg(claims){
+  const orgs = await resolverOrgs(claims.sub);
+  if(!orgs) return claims.app_metadata?.role || PERFIL?.role || "pendente";
+  const gest = orgs.filter(o => PAPEIS_GESTAO.includes(o.papel));
+  if(!gest.length) return null;
+  let salva = null; try{ salva = localStorage.getItem("gestao_org"); }catch(e){}
+  ORG = gest.find(o => o.id === salva) || gest[0];
+  ORGS = gest;
+  return ORG.papel;
+}
+function trocarOrg(id){
+  const o = ORGS.find(x => x.id === id); if(!o) return;
+  try{ localStorage.setItem("gestao_org", id); }catch(e){}
+  location.reload();
+}
 
 /* ---------- Camada REST (fetch puro, padrão FluxAdmin Pro) ---------- */
 async function sb(path, opts={}){
@@ -309,7 +402,9 @@ async function sb(path, opts={}){
   if(SESSION?.access_token) h["Authorization"]="Bearer "+SESSION.access_token;
   const r = await fetch(url,{...opts,headers:h});
   if(!r.ok) throw new Error((await r.text())||r.status);
-  return r.status===204?null:r.json();
+  // gravações com "return=minimal" voltam sem corpo (201/204): não é erro
+  const t = await r.text();
+  return t ? JSON.parse(t) : null;
 }
 function jwtClaims(t){ try{return JSON.parse(atob(t.split(".")[1]))}catch{return {}} }
 
@@ -325,8 +420,8 @@ async function entrar(){
     const claims = jwtClaims(data.access_token);
     const perfis = await sb(`/rest/v1/profiles?id=eq.${claims.sub}&select=*`);
     PERFIL = perfis[0];
-    const papel = claims.app_metadata?.role || PERFIL?.role || "pendente";
-    if(!["supervisor","gestor","admin"].includes(papel)){
+    const papel = await papelNaOrg(claims);
+    if(!papel || !PAPEIS_GESTAO.includes(papel)){
       err.textContent="Seu acesso não permite o módulo de gestão."; SESSION=null; return;
     }
     abrirApp(papel);
@@ -339,8 +434,15 @@ function abrirApp(papel){
   document.getElementById("quemNome").textContent=PERFIL?.nome||"Usuário";
   document.getElementById("quemEmail").textContent=PERFIL?.email||"";
   document.getElementById("quemPapel").textContent=papel;
-  if(papel==="admin") document.getElementById("abaAdmin").style.display="inline-block";
-  popularFiltros().then(carregar);
+  if(papel==="admin" || (MODELO_ORG && papel==="gestor")) document.getElementById("abaAdmin").style.display="inline-block";
+  if(MODELO_ORG && ORG) document.getElementById("abaControle").style.display="inline-block";
+  if(ORG){
+    document.getElementById("topoOrg").textContent = (ORG.sigla ? ORG.sigla + " · " : "") + ORG.nome;
+    const sel = document.getElementById("trocaOrg");
+    if(ORGS.length > 1){ sel.style.display = "block"; sel.innerHTML = ORGS.map(o => `<option value="${o.id}"${o.id===ORG.id?" selected":""}>${esc(o.sigla || o.nome)}</option>`).join(""); }
+    document.querySelectorAll("[data-org-sistema]").forEach(e => e.textContent = ORG.sistema_origem || "base oficial");
+  }
+  popularFiltros().then(carregar).catch(e => console.warn(e));
 }
 
 /* ---------- Navegação ---------- */
@@ -351,14 +453,15 @@ function aba(btn){
   document.querySelectorAll(".secao").forEach(s=>s.classList.remove("on"));
   document.getElementById("sec-"+btn.dataset.sec).classList.add("on");
   if(btn.dataset.sec==="admin") carregarAdmin();
+  if(btn.dataset.sec==="controle") carregarControle();
 }
 
 /* ---------- Filtros ---------- */
 async function popularFiltros(){
-  const invs = CONFIG.DEMO_MODE ? DEMO.inventarios : await sb("/rest/v1/inventarios?select=id,titulo,ano&order=ano.desc");
+  const invs = CONFIG.DEMO_MODE ? DEMO.inventarios : await sb("/rest/v1/inventarios?select=id,titulo,ano&order=ano.desc" + filtroOrg());
   const fInv=document.getElementById("fInv");
   fInv.innerHTML = invs.map(i=>`<option value="${i.id}">${i.titulo}</option>`).join("");
-  const camps = CONFIG.DEMO_MODE ? DEMO.campanhas : await sb("/rest/v1/campanhas?select=id,nome,inventario_id");
+  const camps = CONFIG.DEMO_MODE ? DEMO.campanhas : await sb("/rest/v1/campanhas?select=id,nome,inventario_id" + filtroOrg());
   DADOS.campanhas = camps;
   const fCamp=document.getElementById("fCamp");
   fCamp.innerHTML = camps.map(c=>`<option value="${c.id}">${c.nome}</option>`).join("");
@@ -372,10 +475,16 @@ async function carregar(){
   if(CONFIG.DEMO_MODE){ DADOS.progresso=DEMO.progresso; DADOS.div=DEMO.div; DADOS.conserva=DEMO.conserva; DADOS.prod=DEMO.prod; }
   else{
     const camp=document.getElementById("fCamp").value;
-    DADOS.progresso = await sb(`/rest/v1/vw_progresso_unidade?campanha_id=eq.${camp}&select=*`);
-    DADOS.div       = await sb(`/rest/v1/vw_divergencias_sipac?campanha_id=eq.${camp}&select=*`);
-    DADOS.conserva  = await sb(`/rest/v1/vw_conservacao?campanha_id=eq.${camp}&select=*`);
-    DADOS.prod      = await sb(`/rest/v1/vw_produtividade_coletor?campanha_id=eq.${camp}&select=*`);
+    if(!camp){ DADOS.progresso=[]; DADOS.div=[]; DADOS.conserva=[]; DADOS.prod=[]; renderPainel(); renderDivergencias(); renderConservacao(); renderProdutividade(); return; }
+    // com organizações (migração 03) usa os painéis novos; senão, os antigos
+    const v = MODELO_ORG ? { p:"vw2_progresso_unidade", d:"vw2_divergencias", c:"vw2_conservacao", r:"vw2_produtividade_coletor" }
+                         : { p:"vw_progresso_unidade", d:"vw_divergencias_sipac", c:"vw_conservacao", r:"vw_produtividade_coletor" };
+    const ler = async (nova, antiga) => { try{ return await sb(`/rest/v1/${nova}?campanha_id=eq.${camp}&select=*`); }
+      catch(e){ if(nova === antiga) throw e; return await sb(`/rest/v1/${antiga}?campanha_id=eq.${camp}&select=*`).catch(() => []); } };
+    DADOS.progresso = await ler(v.p, "vw_progresso_unidade");
+    DADOS.div       = await ler(v.d, "vw_divergencias_sipac");
+    DADOS.conserva  = await ler(v.c, "vw_conservacao");
+    DADOS.prod      = await ler(v.r, "vw_produtividade_coletor");
   }
   renderPainel(); renderDivergencias(); renderConservacao(); renderProdutividade();
 }
@@ -414,15 +523,17 @@ function renderDivergencias(){
   const loc=d.reduce((s,x)=>s+x.localizados,0);
   const nao=d.reduce((s,x)=>s+x.nao_localizados,0);
   document.getElementById("indDiv").innerHTML=`
-    <div class="ind"><div class="n">${esp.toLocaleString('pt-BR')}</div><div class="r">Bens esperados (SIPAC)</div></div>
+    <div class="ind"><div class="n">${esp.toLocaleString('pt-BR')}</div><div class="r">Bens esperados (base oficial)</div></div>
     <div class="ind v"><div class="n">${loc.toLocaleString('pt-BR')}</div><div class="r">Localizados</div></div>
     <div class="ind r"><div class="n">${nao.toLocaleString('pt-BR')}</div><div class="r">Não localizados</div></div>
     <div class="ind a"><div class="n">${esp?Math.round(100*nao/esp):0}%</div><div class="r">Índice de divergência</div></div>`;
   document.getElementById("tabDiv").innerHTML=tabela(
-    ["Unidade","Esperados","Localizados","Não localizados","%"],
+    ["Unidade","Esperados","Localizados","Não localizados","%"].concat(d.some(x=>x.valor_nao_localizado!=null)?["Valor não localizado"]:[]),
     d.map(x=>[x.unidade,x.esperados,x.localizados,
-      `<b style="color:${x.nao_localizados>0?'#C0392B':'#1A4731'}">${x.nao_localizados}</b>`,x.pct_nao_localizado+"%"]));
+      `<b style="color:${x.nao_localizados>0?'#C0392B':'#1A4731'}">${x.nao_localizados}</b>`,x.pct_nao_localizado+"%"]
+      .concat(x.valor_nao_localizado!=null?[Number(x.valor_nao_localizado).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})]:[])));
 }
+function esc(t){ return String(t==null?"":t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 /* ---------- Render: Conservação ---------- */
 function renderConservacao(){
@@ -446,6 +557,13 @@ function renderProdutividade(){
 
 /* ---------- Administração ---------- */
 async function carregarAdmin(){
+  if(MODELO_ORG && ORG){
+    ["orgPainel","estruturaPainel","membrosPainel"].forEach(id => document.getElementById(id).style.display = "block");
+    ["avisoLegado","painelPendentes","painelAtivos"].forEach(id => document.getElementById(id).style.display = "none");
+    if(ORG.papel !== "admin") document.getElementById("orgPainel").style.display = "none";
+    preencherOrg(); carregarEstrutura(); carregarMembros(); listarCampanhas();
+    return;
+  }
   let pend,ativos;
   if(CONFIG.DEMO_MODE){ pend=DEMO.pendentes; ativos=DEMO.ativos; }
   else{
@@ -507,45 +625,45 @@ function exportar(tipo){
    =================================================================== */
 const DEMO={
   inventarios:[{id:"1",titulo:"Inventário Geral 2026",ano:2026}],
-  campanhas:[{id:"c1",nome:"CCEN — 1º semestre",inventario_id:"1"},{id:"c2",nome:"CCS — 1º semestre",inventario_id:"1"}],
+  campanhas:[{id:"c1",nome:"Educação — 1º semestre",inventario_id:"1"},{id:"c2",nome:"Saúde — 1º semestre",inventario_id:"1"}],
   progresso:[
-    {unidade:"CCEN — Centro de Ciências Exatas",ambientes_total:184,ambientes_coletados:151,ambientes_consolidados:120,pct_concluido:82.1},
-    {unidade:"CCS — Centro de Ciências da Saúde",ambientes_total:210,ambientes_coletados:98,ambientes_consolidados:60,pct_concluido:46.7},
-    {unidade:"CT — Centro de Tecnologia",ambientes_total:167,ambientes_coletados:167,ambientes_consolidados:140,pct_concluido:100},
-    {unidade:"CCHLA — Ciências Humanas",ambientes_total:143,ambientes_coletados:71,ambientes_consolidados:40,pct_concluido:49.7},
-    {unidade:"PRA — Pró-Reitoria de Administração",ambientes_total:56,ambientes_coletados:52,ambientes_consolidados:52,pct_concluido:92.9}],
+    {unidade:"Secretaria de Educação",ambientes_total:184,ambientes_coletados:151,ambientes_consolidados:120,pct_concluido:82.1},
+    {unidade:"Secretaria de Saúde",ambientes_total:210,ambientes_coletados:98,ambientes_consolidados:60,pct_concluido:46.7},
+    {unidade:"Secretaria de Infraestrutura",ambientes_total:167,ambientes_coletados:167,ambientes_consolidados:140,pct_concluido:100},
+    {unidade:"Secretaria de Assistência Social",ambientes_total:143,ambientes_coletados:71,ambientes_consolidados:40,pct_concluido:49.7},
+    {unidade:"Secretaria de Administração",ambientes_total:56,ambientes_coletados:52,ambientes_consolidados:52,pct_concluido:92.9}],
   div:[
-    {unidade:"CCEN",esperados:2140,localizados:2011,nao_localizados:129,pct_nao_localizado:6.0},
-    {unidade:"CCS",esperados:3320,localizados:2980,nao_localizados:340,pct_nao_localizado:10.2},
-    {unidade:"CT",esperados:1890,localizados:1874,nao_localizados:16,pct_nao_localizado:0.8},
-    {unidade:"CCHLA",esperados:1210,localizados:1102,nao_localizados:108,pct_nao_localizado:8.9},
-    {unidade:"PRA",esperados:640,localizados:638,nao_localizados:2,pct_nao_localizado:0.3}],
+    {unidade:"Educação",esperados:2140,localizados:2011,nao_localizados:129,pct_nao_localizado:6.0},
+    {unidade:"Saúde",esperados:3320,localizados:2980,nao_localizados:340,pct_nao_localizado:10.2},
+    {unidade:"Infraestrutura",esperados:1890,localizados:1874,nao_localizados:16,pct_nao_localizado:0.8},
+    {unidade:"Assistência Social",esperados:1210,localizados:1102,nao_localizados:108,pct_nao_localizado:8.9},
+    {unidade:"Administração",esperados:640,localizados:638,nao_localizados:2,pct_nao_localizado:0.3}],
   conserva:[
-    {unidade:"CCEN",conservacao:"bom",total:1420},{unidade:"CCEN",conservacao:"regular",total:410},
-    {unidade:"CCEN",conservacao:"ruim",total:130},{unidade:"CCEN",conservacao:"inservivel",total:51},
-    {unidade:"CCS",conservacao:"bom",total:1980},{unidade:"CCS",conservacao:"regular",total:620},
-    {unidade:"CCS",conservacao:"inservivel",total:88},{unidade:"CT",conservacao:"bom",total:1600},
-    {unidade:"CT",conservacao:"regular",total:210},{unidade:"CT",conservacao:"inservivel",total:22}],
+    {unidade:"Educação",conservacao:"bom",total:1420},{unidade:"Educação",conservacao:"regular",total:410},
+    {unidade:"Educação",conservacao:"ruim",total:130},{unidade:"Educação",conservacao:"inservivel",total:51},
+    {unidade:"Saúde",conservacao:"bom",total:1980},{unidade:"Saúde",conservacao:"regular",total:620},
+    {unidade:"Saúde",conservacao:"inservivel",total:88},{unidade:"Infraestrutura",conservacao:"bom",total:1600},
+    {unidade:"Infraestrutura",conservacao:"regular",total:210},{unidade:"Infraestrutura",conservacao:"inservivel",total:22}],
   prod:[
     {coletor:"Ana Ribeiro",ambientes:64,itens_confirmados:812,ultima_coleta:"2026-08-05"},
     {coletor:"Carlos Menezes",ambientes:58,itens_confirmados:730,ultima_coleta:"2026-08-06"},
     {coletor:"Juliana Alves",ambientes:41,itens_confirmados:503,ultima_coleta:"2026-08-04"},
     {coletor:"Marcos Tavares",ambientes:37,itens_confirmados:498,ultima_coleta:"2026-08-06"}],
   pendentes:[
-    {id:"u1",nome:"Roberto Lima",email:"roberto.lima@ufpb.br",criado_em:"2026-08-05"},
-    {id:"u2",nome:"Fernanda Sousa",email:"fernanda.sousa@ufpb.br",criado_em:"2026-08-06"}],
+    {id:"u1",nome:"Roberto Lima",email:"roberto.lima@exemplo.org",criado_em:"2026-08-05"},
+    {id:"u2",nome:"Fernanda Sousa",email:"fernanda.sousa@exemplo.org",criado_em:"2026-08-06"}],
   ativos:[
-    {id:"a1",nome:"Ana Ribeiro",email:"ana.ribeiro@ufpb.br",role:"coletor",ativo:true},
-    {id:"a2",nome:"Dennis Freitas",email:"dennis@ufpb.br",role:"admin",ativo:true},
-    {id:"a3",nome:"Paulo Gestor",email:"paulo@ufpb.br",role:"gestor",ativo:true}]
+    {id:"a1",nome:"Ana Ribeiro",email:"ana.ribeiro@exemplo.org",role:"coletor",ativo:true},
+    {id:"a2",nome:"Administrador",email:"admin@exemplo.org",role:"admin",ativo:true},
+    {id:"a3",nome:"Paulo Gestor",email:"paulo@exemplo.org",role:"gestor",ativo:true}]
 };
 function iniciarDemo(){
   document.getElementById("demoFlag").style.display="block";
-  PERFIL={nome:"Dennis Freitas (demo)",email:"dennis@ufpb.br"};
+  PERFIL={nome:"Administrador (demo)",email:"admin@exemplo.org"};
   abrirApp("admin");
 }
 /* Auto-inicia em modo demo para revisão imediata */
-if(CONFIG.DEMO_MODE){ window.addEventListener("load",()=>{ document.getElementById("email").value="dennis@ufpb.br"; }); }
+if(CONFIG.DEMO_MODE){ window.addEventListener("load",()=>{ document.getElementById("email").value="admin@exemplo.org"; }); }
 
 async function criarCampanha(){
   const nome = document.getElementById("campNome").value.trim();
@@ -557,22 +675,22 @@ async function criarCampanha(){
   msg.style.color="#8a887f"; msg.textContent="Criando...";
   try{
     // quem sou eu (para criado_por)
-    const me = await sb("/rest/v1/profiles?select=id&limit=1&role=eq.admin");
-    const criador = me && me[0] ? me[0].id : null;
+    const criador = jwtClaims(SESSION.access_token).sub || null;
+    const comOrg = o => (ORG && ORG.id) ? Object.assign(o, { org_id: ORG.id }) : o;
     // inventário do ano (reaproveita se já existir)
-    let inv = await sb("/rest/v1/inventarios?select=id&ano=eq."+ano+"&limit=1");
+    let inv = await sb("/rest/v1/inventarios?select=id&ano=eq."+ano+"&limit=1" + filtroOrg());
     let invId;
     if(inv && inv.length){ invId = inv[0].id; }
     else{
       const novo = await sb("/rest/v1/inventarios",{method:"POST",
         headers:{Prefer:"return=representation"},
-        body:JSON.stringify([{ano:ano,titulo:"Inventário "+ano,criado_por:criador}])});
+        body:JSON.stringify([comOrg({ano:ano,titulo:"Inventário "+ano+(ORG&&ORG.sigla?" — "+ORG.sigla:""),criado_por:criador})])});
       invId = novo[0].id;
     }
     // cria a campanha aberta (guarda o tipo no nome, já que a coluna é livre)
     await sb("/rest/v1/campanhas",{method:"POST",
       headers:{Prefer:"return=minimal"},
-      body:JSON.stringify([{inventario_id:invId,nome:nome+" · "+tipo,aberta:true,criado_por:criador}])});
+      body:JSON.stringify([comOrg({inventario_id:invId,nome:nome+" · "+tipo,aberta:true,criado_por:criador})])});
     msg.style.color="#1A4731"; msg.textContent="Campanha criada e aberta!";
     document.getElementById("campNome").value="";
     listarCampanhas();
@@ -582,7 +700,7 @@ async function listarCampanhas(){
   const el = document.getElementById("campLista"); if(!el) return;
   if(CONFIG.DEMO_MODE){ el.innerHTML=""; return; }
   try{
-    const cs = await sb("/rest/v1/campanhas?select=id,nome,aberta&order=criado_em.desc&limit=20");
+    const cs = await sb("/rest/v1/campanhas?select=id,nome,aberta&order=criado_em.desc&limit=20" + filtroOrg());
     if(!cs || !cs.length){ el.innerHTML='<p class="sub">Nenhuma campanha ainda.</p>'; return; }
     el.innerHTML = '<h3 style="font-size:14px;margin:6px 0">Campanhas</h3>' + cs.map(function(c){
       return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee">'
@@ -596,6 +714,205 @@ async function toggleCampanha(id, abrir){
   catch(e){ alert("Falha: "+e.message); }
 }
 
+/* ===================================================================
+   ORGANIZAÇÃO, CONVITE, ESTRUTURA E MEMBROS (modelo de várias organizações)
+   =================================================================== */
+function preencherOrg(){
+  const v = (id, x) => { document.getElementById(id).value = x || ""; };
+  v("oNome", ORG.nome); v("oSigla", ORG.sigla); document.getElementById("oTipo").value = ORG.tipo || "publica";
+  v("oSistema", ORG.sistema_origem); v("oRotUnid", ORG.rotulo_unidade); v("oRotMat", ORG.rotulo_matricula); v("oDest", ORG.destinacao_nome);
+  document.getElementById("oCodigo").textContent = ORG.codigo_convite || "—";
+}
+async function salvarOrg(){
+  const msg = document.getElementById("oMsg"), g = id => document.getElementById(id).value.trim();
+  if(!g("oNome")){ msg.textContent = "Informe o nome."; return; }
+  const dados = { nome:g("oNome"), sigla:g("oSigla")||null, tipo:document.getElementById("oTipo").value, sistema_origem:g("oSistema")||"sistema patrimonial",
+    rotulo_unidade:g("oRotUnid")||"Unidade organizacional", rotulo_matricula:g("oRotMat")||"Matrícula", destinacao_nome:g("oDest")||"Destinação de inservíveis" };
+  msg.textContent = "Salvando...";
+  try{
+    await sb("/rest/v1/organizacoes?id=eq." + ORG.id, { method:"PATCH", headers:{ Prefer:"return=minimal" }, body: JSON.stringify(dados) });
+    Object.assign(ORG, dados); msg.textContent = "Dados salvos. O app de campo passa a usar estes nomes no próximo acesso.";
+    document.getElementById("topoOrg").textContent = (ORG.sigla ? ORG.sigla + " · " : "") + ORG.nome;
+  }catch(e){ msg.textContent = "Falha ao salvar: " + e.message; }
+}
+function linkConvite(){ return new URL("index.html?convite=" + encodeURIComponent(ORG.codigo_convite || ""), location.href).href; }
+async function copiarConvite(){
+  const t = "Você foi convidado para o levantamento patrimonial de " + ORG.nome + ". Entre por este link: " + linkConvite() + "  (código: " + ORG.codigo_convite + ")";
+  try{ await navigator.clipboard.writeText(t); alert("Convite copiado. Cole no WhatsApp ou no e-mail da equipe."); }
+  catch(e){ prompt("Copie o convite:", t); }
+}
+async function novoConvite(){
+  if(!confirm("Gerar um novo código? O código atual deixa de funcionar (quem já entrou continua).")) return;
+  try{ const c = await sb("/rest/v1/rpc/novo_codigo_convite", { method:"POST", body: JSON.stringify({ p_org: ORG.id }) });
+    ORG.codigo_convite = c; document.getElementById("oCodigo").textContent = c; }
+  catch(e){ alert("Falha: " + e.message); }
+}
+/* ---------- estrutura ---------- */
+let ESTRUTURA = [];
+async function carregarEstrutura(){
+  const box = document.getElementById("eArvore"), res = document.getElementById("eResumo");
+  try{
+    const todas = [];
+    for(let ini = 0; ini < 100000; ini += 1000){
+      const parte = await sb(`/rest/v1/unidades?org_id=eq.${ORG.id}&ativo=eq.true&select=code,name,parent_code&order=code&limit=1000&offset=${ini}`);
+      todas.push(...(parte||[])); if(!parte || parte.length < 1000) break;
+    }
+    ESTRUTURA = todas;
+  }catch(e){ res.textContent = "Não foi possível carregar a estrutura: " + e.message; return; }
+  res.innerHTML = ESTRUTURA.length ? `<b>${ESTRUTURA.length}</b> unidades cadastradas.` : "Nenhuma unidade cadastrada ainda. Importe uma planilha ou comece por um modelo pronto.";
+  // árvore (mostra até 400 linhas)
+  const filhos = new Map(); ESTRUTURA.forEach(u => { const k = u.parent_code || ""; if(!filhos.has(k)) filhos.set(k, []); filhos.get(k).push(u); });
+  const codigos = new Set(ESTRUTURA.map(u => u.code)), linhas = [];
+  const raiz = ESTRUTURA.filter(u => !u.parent_code || !codigos.has(u.parent_code));
+  (function desce(lst, n){ lst.forEach(u => { if(linhas.length >= 400) return; linhas.push(`<div style="padding-left:${n*16}px"><code>${esc(u.code)}</code>${esc(u.name)}</div>`); desce(filhos.get(u.code) || [], n + 1); }); })(raiz, 0);
+  box.innerHTML = linhas.join("") + (ESTRUTURA.length > 400 ? `<div class="sub">… e mais ${ESTRUTURA.length - 400}</div>` : "");
+}
+function paiPeloCodigo(code, todos){
+  const partes = String(code).split(".");
+  while(partes.length > 1){ partes.pop(); const p = partes.join("."); if(todos.has(p)) return p; }
+  return null;
+}
+async function gravarEstrutura(linhas){
+  const todos = new Set(linhas.map(l => l.code));
+  const rows = linhas.map(l => ({ org_id: ORG.id, code: l.code, name: l.name, parent_code: l.parent_code || paiPeloCodigo(l.code, todos), ativo: true }));
+  for(let i = 0; i < rows.length; i += 500){
+    await sb("/rest/v1/unidades", { method:"POST", headers:{ Prefer:"resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows.slice(i, i + 500)) });
+  }
+  return rows.length;
+}
+async function planilhaLib(){
+  if(!window.XLSX) await new Promise((ok, falha) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload = ok; s.onerror = () => falha(new Error("sem internet para ler planilhas")); document.head.appendChild(s); });
+  return window.XLSX;
+}
+const normG = t => String(t||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
+async function importarEstrutura(arq){
+  if(!arq) return;
+  const res = document.getElementById("eResumo"); res.textContent = "Lendo a planilha...";
+  try{
+    const X = await planilhaLib();
+    const wb = X.read(await arq.arrayBuffer(), { type:"array" });
+    const dados = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:"", raw:false });
+    if(!dados.length) throw new Error("a planilha está vazia");
+    const cab = Object.keys(dados[0]);
+    const acha = re => cab.find(h => re.test(normG(h)));
+    const cPai = acha(/pai|superior|parent|vinculad|subordina/);
+    const cCod = cab.find(h => h !== cPai && /^(codigo|cod|code|id|sigla)/.test(normG(h))) || acha(/codigo|cod\b|code/);
+    const cNome = cab.find(h => h !== cCod && h !== cPai && /nome|name|unidade|setor|descri|denomina/.test(normG(h)));
+    if(!cCod || !cNome) throw new Error("não achei as colunas de código e de nome (colunas encontradas: " + cab.join(", ") + ")");
+    const linhas = dados.map(d => ({ code: String(d[cCod]).trim(), name: String(d[cNome]).trim(), parent_code: cPai ? String(d[cPai]).trim() || null : null }))
+      .filter(l => l.code && l.name);
+    if(!confirm(`Importar ${linhas.length} unidades?\n\nCódigo: "${cCod}" · Nome: "${cNome}"${cPai ? ` · Superior: "${cPai}"` : " · Superior: pelos pontos do código"}\n\nUnidades com o mesmo código são atualizadas.`)){ carregarEstrutura(); return; }
+    res.textContent = "Gravando...";
+    const n = await gravarEstrutura(linhas);
+    alert(n + " unidades gravadas."); carregarEstrutura();
+  }catch(e){ res.textContent = "Não foi possível importar: " + e.message; }
+}
+function baixarModeloEstrutura(){
+  const csv = "codigo;nome;codigo_superior\r\n01;SECRETARIA DE ADMINISTRAÇÃO;\r\n01.01;Departamento de Patrimônio;01\r\n01.02;Departamento de Compras;01\r\n02;SECRETARIA DE SAÚDE;\r\n02.01;Unidade Básica de Saúde Centro;02\r\n";
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type:"text/csv" })); a.download = "modelo-estrutura.csv"; a.click();
+}
+const MODELOS_ESTRUTURA = {
+  prefeitura: ["Gabinete do Prefeito", ["Secretaria de Administração", "Departamento de Patrimônio", "Recursos Humanos", "Compras e Licitações", "Almoxarifado central"],
+    ["Secretaria de Fazenda", "Tributação", "Contabilidade"], ["Secretaria de Educação", "Escolas municipais", "Creches", "Transporte escolar"],
+    ["Secretaria de Saúde", "Unidades básicas de saúde", "Hospital municipal", "Vigilância em saúde"], ["Secretaria de Infraestrutura", "Obras", "Frota e oficina"],
+    ["Secretaria de Assistência Social", "CRAS", "CREAS"], "Procuradoria-Geral do Município", "Controladoria-Geral do Município"],
+  universidade: [["Reitoria", "Gabinete", "Procuradoria", "Auditoria interna"], ["Pró-Reitoria de Administração", "Divisão de Patrimônio", "Almoxarifado", "Compras e contratos"],
+    "Pró-Reitoria de Graduação", "Pró-Reitoria de Pesquisa e Pós-Graduação", "Pró-Reitoria de Gestão de Pessoas", ["Centro / Campus 1", "Direção do centro", "Departamento A", "Departamento B", "Laboratórios", "Biblioteca setorial"],
+    ["Centro / Campus 2", "Direção do centro", "Departamento C", "Laboratórios"], "Biblioteca central", "Hospital universitário", "Restaurante universitário"],
+  empresa: ["Diretoria", ["Administrativo", "Financeiro", "Recursos Humanos", "Patrimônio e facilities"], "Comercial",
+    ["Operações", "Produção", "Logística e almoxarifado", "Manutenção"], "Tecnologia da informação", ["Filial 1", "Loja / unidade de atendimento", "Estoque"]],
+  hospital: ["Direção geral", ["Diretoria administrativa", "Patrimônio", "Almoxarifado", "Engenharia clínica", "Hotelaria"],
+    ["Diretoria técnica", "Pronto-socorro", "UTI adulto", "UTI neonatal", "Centro cirúrgico", "Ambulatório", "Enfermarias", "Diagnóstico por imagem", "Laboratório"], "Farmácia", "Faturamento"],
+  escola: ["Direção", "Secretaria escolar", "Coordenação pedagógica", "Salas de aula", "Laboratório de informática", "Laboratório de ciências", "Biblioteca", "Quadra / ginásio", "Cozinha e refeitório", "Almoxarifado"],
+  tribunal: ["Presidência", ["Diretoria-Geral", "Secretaria de Administração", "Patrimônio", "Almoxarifado", "Engenharia e manutenção"], "Secretaria de Tecnologia da Informação", "Corregedoria", ["Unidades jurisdicionais / regionais", "Sede", "Unidade regional 1", "Unidade regional 2"]]
+};
+async function aplicarModeloEstrutura(){
+  const k = document.getElementById("eModelo").value; if(!k) return alert("Escolha um modelo.");
+  if(ESTRUTURA.length && !confirm("A organização já tem " + ESTRUTURA.length + " unidades. O modelo acrescenta as dele (códigos 01, 02…), podendo atualizar unidades com o mesmo código. Continuar?")) return;
+  const linhas = [];
+  MODELOS_ESTRUTURA[k].forEach((it, i) => {
+    const cod = String(i + 1).padStart(2, "0");
+    if(Array.isArray(it)){ linhas.push({ code:cod, name:it[0] }); it.slice(1).forEach((f, j) => linhas.push({ code: cod + "." + String(j + 1).padStart(2, "0"), name:f, parent_code:cod })); }
+    else linhas.push({ code:cod, name:it });
+  });
+  try{ const n = await gravarEstrutura(linhas); alert(n + " unidades criadas a partir do modelo. Renomeie ou complemente importando sua planilha."); carregarEstrutura(); }
+  catch(e){ alert("Falha: " + e.message); }
+}
+/* ---------- membros ---------- */
+async function carregarMembros(){
+  const box = document.getElementById("tabMembros");
+  try{
+    const ms = await sb(`/rest/v1/vw_membros?org_id=eq.${ORG.id}&select=*&order=nome`);
+    const papeis = ["coletor","supervisor","gestor","admin"], eu = jwtClaims(SESSION.access_token).sub, souAdmin = ORG.papel === "admin";
+    box.innerHTML = tabela(["Nome","E-mail","Papel","Situação"], (ms||[]).map(m => [
+      esc(m.nome || "(sem nome)") + (m.matricula ? `<br><small style="color:var(--tinta-3)">${esc(m.matricula)}</small>` : ""), esc(m.email || ""),
+      souAdmin && m.user_id !== eu ? `<select onchange="mudarPapel('${m.user_id}',this.value)">${papeis.map(p => `<option${p===m.papel?" selected":""}>${p}</option>`).join("")}</select>` : `<span class="pill bom">${esc(m.papel)}</span>`,
+      souAdmin && m.user_id !== eu ? `<button class="btn mini" onclick="alternarAtivo('${m.user_id}',${!m.ativo})">${m.ativo ? "Desativar" : "Reativar"}</button>` : (m.ativo ? "Ativo" : "Inativo")]));
+  }catch(e){ box.innerHTML = '<p class="vazio">Não foi possível listar os membros: ' + esc(e.message) + '</p>'; }
+}
+async function mudarPapel(uid, papel){
+  try{ await sb(`/rest/v1/membros?org_id=eq.${ORG.id}&user_id=eq.${uid}`, { method:"PATCH", headers:{ Prefer:"return=minimal" }, body: JSON.stringify({ papel }) }); }
+  catch(e){ alert("Falha: " + e.message); carregarMembros(); }
+}
+async function alternarAtivo(uid, ativo){
+  try{ await sb(`/rest/v1/membros?org_id=eq.${ORG.id}&user_id=eq.${uid}`, { method:"PATCH", headers:{ Prefer:"return=minimal" }, body: JSON.stringify({ ativo }) }); carregarMembros(); }
+  catch(e){ alert("Falha: " + e.message); }
+}
+
+
+/* ---------- Termos e movimentações (eventos enviados pelo app) ---------- */
+let EVENTOS = [];
+const quando = iso => iso ? new Date(iso).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}) : "—";
+async function carregarControle(){
+  const tipo = document.getElementById("ctlTipo").value, box = document.getElementById("tabCtl");
+  box.innerHTML = '<p class="vazio">Carregando…</p>';
+  try{
+    const sel = tipo === "auditoria" ? "id,tipo,ocorrido_em,dados" : "id,tipo,ocorrido_em,dados";
+    EVENTOS = await sb(`/rest/v1/eventos?org_id=eq.${ORG.id}&tipo=eq.${tipo}&select=${sel}&order=ocorrido_em.desc&limit=2000`);
+    if(tipo === "transferencia"){
+      const aceites = await sb(`/rest/v1/eventos?org_id=eq.${ORG.id}&tipo=eq.aceite&select=dados,ocorrido_em&limit=5000`);
+      const porT = new Map(aceites.map(a => [a.dados.transferencia, a]));
+      EVENTOS.forEach(e => { const a = porT.get(e.id); if(a){ e.dados.aceitoEm = a.ocorrido_em; e.dados.recebedor = a.dados.recebedor; e.dados.situacao = "aceita"; } });
+    }
+    const n = EVENTOS.length;
+    document.getElementById("indCtl").innerHTML = tipo === "termo"
+      ? `<div class="ind v"><div class="n">${n}</div><div class="r">Termos assinados</div></div><div class="ind"><div class="n">${EVENTOS.reduce((t,e)=>t+((e.dados.itens||[]).length),0)}</div><div class="r">Bens sob responsabilidade</div></div><div class="ind a"><div class="n">${EVENTOS.filter(e=>e.dados.especie==="encerramento").length}</div><div class="r">Termos de encerramento</div></div>`
+      : tipo === "transferencia"
+      ? `<div class="ind"><div class="n">${n}</div><div class="r">Transferências</div></div><div class="ind a"><div class="n">${EVENTOS.filter(e=>e.dados.situacao!=="aceita").length}</div><div class="r">Aguardando aceite</div></div>`
+      : `<div class="ind"><div class="n">${n}</div><div class="r">Alterações registradas (últimas 2000)</div></div>`;
+    renderControle();
+  }catch(e){
+    box.innerHTML = /eventos|schema cache|does not exist/i.test(e.message)
+      ? '<p class="vazio"><b>Ainda não ativado</b>Rode a migração 03 no Supabase para receber termos, transferências e histórico dos aparelhos.</p>'
+      : '<p class="vazio">Falha ao carregar: ' + esc(e.message) + '</p>';
+  }
+}
+function linhasControle(){
+  const tipo = document.getElementById("ctlTipo").value, q = normG(document.getElementById("ctlBusca").value);
+  const linhas = EVENTOS.map(e => { const d = e.dados || {};
+    if(tipo === "termo") return { "Número": d.numero, "Data": quando(d.em), "Espécie": d.especie === "encerramento" ? "Encerramento" : "Responsabilidade",
+      "Local": d.escopo ? d.escopo.nome : d.unidade, "Responsável": d.responsavel ? d.responsavel.nome : ("Comissão: " + (d.membros || []).join(", ")),
+      "Cargo": d.responsavel ? d.responsavel.cargo : "", "Bens": d.itens ? d.itens.length : d.esperados,
+      "Conformidade": d.conformidade != null ? String(d.conformidade).replace(".", ",") + "%" : "", "Código": d.codigo };
+    if(tipo === "transferencia") return { "Data": quando(d.em), "Plaqueta": d.item && d.item.plaqueta, "Bem": d.item && d.item.descricao, "Origem": d.de && d.de.nome,
+      "Destino": d.para && d.para.nome, "Motivo": d.motivo, "Por": d.por, "Recebedor": d.recebedor && d.recebedor.nome, "Situação": d.situacao || "aguardando aceite" };
+    return { "Data": quando(d.em), "Quem": d.quem, "Ambiente": d.ambiente, "Plaqueta": d.plaq, "Bem": d.desc,
+      "O que mudou": d.campo ? (d.campo + ": " + d.de + " → " + d.para) : (d.nota || d.tipo) }; });
+  return q ? linhas.filter(l => normG(Object.values(l).join(" ")).includes(q)) : linhas;
+}
+function renderControle(){
+  const l = linhasControle(), box = document.getElementById("tabCtl");
+  if(!l.length){ box.innerHTML = '<p class="vazio"><b>Nada por aqui ainda</b>Os registros chegam quando os aparelhos sincronizam.</p>'; return; }
+  const cols = Object.keys(l[0]);
+  box.innerHTML = tabela(cols, l.slice(0, 500).map(x => cols.map(c => esc(x[c] == null ? "" : x[c]))));
+}
+function exportarControle(){
+  const l = linhasControle(); if(!l.length) return alert("Sem dados para exportar.");
+  const cols = Object.keys(l[0]);
+  const csv = [cols.join(";"), ...l.map(r => cols.map(c => `"${String(r[c] == null ? "" : r[c]).replace(/"/g,'""')}"`).join(";"))].join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type:"text/csv" }));
+  a.download = document.getElementById("ctlTipo").value + "_" + new Date().toISOString().slice(0,10) + ".csv"; a.click();
+}
 function entrarGoogle(){
   if(CONFIG.DEMO_MODE){ return iniciarDemo(); }
   const redirect = location.href.split("#")[0];
@@ -621,9 +938,11 @@ async function checarSessaoGoogle(){
     const claims = jwtClaims(token);
     const perfis = await sb(`/rest/v1/profiles?id=eq.${claims.sub}&select=*`);
     PERFIL = perfis[0];
-    const papel = claims.app_metadata?.role || PERFIL?.role || "pendente";
-    if(!["supervisor","gestor","admin"].includes(papel)){
-      if(err) err.textContent = "Sua conta não tem acesso ao módulo de gestão. Fale com o administrador.";
+    const papel = await papelNaOrg(claims);
+    if(!papel || !PAPEIS_GESTAO.includes(papel)){
+      if(err) err.textContent = MODELO_ORG
+        ? "Sua conta não é supervisora, gestora nem administradora de nenhuma organização. Peça ao administrador para ajustar seu papel, ou crie uma organização pelo app de campo."
+        : "Sua conta não tem acesso ao módulo de gestão. Fale com o administrador.";
       SESSION = null; localStorage.removeItem("gestao_session"); return;
     }
     abrirApp(papel);

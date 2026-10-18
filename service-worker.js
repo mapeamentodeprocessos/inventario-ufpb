@@ -1,11 +1,15 @@
 // Versão do cache. SEMPRE que publicar uma alteração no app, troque o número
 // abaixo (v3, v4, ...). Isso apaga o cache antigo e garante que todo mundo
 // receba a versão nova em vez de continuar usando a guardada no aparelho.
-const CACHE_NAME = 'coleta-patrimonio-v4';
+const CACHE_NAME = 'coleta-patrimonio-v10';
 
 const APP_SHELL = [
   './',
   './index.html',
+  './croqui.html',
+  './config.js',
+  './sync.js',
+  './controle.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'

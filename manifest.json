@@ -1,7 +1,7 @@
 {
-  "name": "Coleta de Campo — Inventário Patrimonial",
-  "short_name": "Coleta Patrimônio",
-  "description": "Coleta de campo offline-first para levantamento e conferência de bens patrimoniais.",
+  "name": "Levantamento Patrimonial — Inventário em campo",
+  "short_name": "Patrimônio",
+  "description": "Levantamento, conferência e inventário patrimonial em campo, mesmo sem internet. Para organizações públicas e privadas.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

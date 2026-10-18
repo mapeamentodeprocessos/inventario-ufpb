@@ -131,9 +131,10 @@
 
   /* ---------- Mapeamento local -> schema Supabase ---------- */
   function mapAmbiente(a, uid, ambienteUuid) {
-    return {
+    const linha = {
       id: ambienteUuid,
-      campanha_id: state.campanhaId,
+      // a campanha escolhida quando o ambiente foi criado; a ativa só para os antigos
+      campanha_id: a.campanhaId || state.campanhaId,
       coletor_id: state.session.user.id,
       nome: a.name || 'Sem nome',
       andar: a.andar || '',
@@ -146,6 +147,8 @@
       coletado_em: a.collectedAt || null,
       criado_em: a.createdAt || new Date().toISOString()
     };
+    if(a.orgId) linha.org_id = a.orgId;   // só quando o banco já tem organizações
+    return linha;
   }
   function mapItem(it, ambienteUuid, itemUuid, uid, fotoPath) {
     const cons = ['bom', 'regular', 'ruim', 'inservivel'].includes(it.conservacao) ? it.conservacao : null;
@@ -197,6 +200,70 @@
 
     rec.synced = true; rec.lastError = null; rec.syncedAt = new Date().toISOString();
     await mapPut(rec);
+
+    // 4) trilha de auditoria do ambiente (falha aqui não segura o resto)
+    try{ await enviarHistorico(a, rec); }catch(e){ console.warn('eventos', e.message); }
+  }
+
+  /* ---------- Eventos: auditoria, termos e transferências ---------- */
+  // Só existem no banco depois da migração 03. Cada evento tem id próprio e é
+  // enviado uma vez; reenviar é inofensivo (o banco ignora o repetido).
+  let semTabelaEventos = false;
+  const ehUuid = v => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v || ''));
+  async function postarEventos(linhas){
+    if(!linhas.length || semTabelaEventos) return false;
+    try{
+      await rest('/rest/v1/eventos', { method:'POST', headers:{ Prefer:'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(linhas) });
+      return true;
+    }catch(e){
+      if(/PGRST20|42P01|does not exist|schema cache|Could not find/i.test(e.message)) semTabelaEventos = true;
+      throw e;
+    }
+  }
+  async function enviarHistorico(a, rec){
+    if(!a.orgId || !Array.isArray(a.historico) || !a.historico.length) return;
+    const ja = new Set(rec.eventosEnviados || []);
+    const novos = a.historico.filter(h => ehUuid(h.id) && !ja.has(h.id));
+    if(!novos.length) return;
+    for(let i = 0; i < novos.length; i += 200){
+      const lote = novos.slice(i, i + 200);
+      await postarEventos(lote.map(h => ({ id: h.id, org_id: a.orgId, ambiente_id: rec.uuid, tipo: 'auditoria', ocorrido_em: h.em,
+        dados: Object.assign({ ambiente: a.name }, h) })));
+      lote.forEach(h => ja.add(h.id));
+    }
+    rec.eventosEnviados = Array.from(ja).slice(-5000);
+    await mapPut(rec);
+  }
+  async function lerMetaDoApp(chave){
+    const db = await openDB(APP_DB);
+    if(!db.objectStoreNames.contains('meta')) return null;
+    return new Promise(res => {
+      const rq = db.transaction('meta', 'readonly').objectStore('meta').get(chave);
+      rq.onsuccess = () => res(rq.result ? rq.result.value : null); rq.onerror = () => res(null);
+    });
+  }
+  async function enviarControle(){
+    const org = (global.ORG && global.ORG.id) || null;
+    if(!org || semTabelaEventos) return;
+    const rec = (await mapGet('__controle__:' + org)) || { localId: '__controle__:' + org, enviados: [] };
+    const ja = new Set(rec.enviados || []), linhas = [];
+    const mapaAmb = {}; (await mapAll()).forEach(m => { mapaAmb[m.localId] = m.uuid; });
+    ((await lerMetaDoApp('termos:' + org)) || []).forEach(t => {
+      if(ehUuid(t.id) && !ja.has(t.id)) linhas.push({ id: t.id, org_id: org, ambiente_id: (t.escopo && t.escopo.tipo === 'ambiente' && mapaAmb[t.escopo.id]) || null, tipo: 'termo', ocorrido_em: t.em, dados: t });
+    });
+    ((await lerMetaDoApp('encerramentos:' + org)) || []).forEach(t => {
+      if(ehUuid(t.id) && !ja.has(t.id)) linhas.push({ id: t.id, org_id: org, ambiente_id: null, tipo: 'termo', ocorrido_em: t.em, dados: Object.assign({ especie: 'encerramento' }, t) });
+    });
+    ((await lerMetaDoApp('transferencias:' + org)) || []).forEach(t => {
+      if(ehUuid(t.id) && !ja.has(t.id)) linhas.push({ id: t.id, org_id: org, ambiente_id: mapaAmb[t.para && t.para.id] || null, tipo: 'transferencia', ocorrido_em: t.em, dados: Object.assign({}, t, { assinatura: t.aceitoEm ? t.assinatura : null }) });
+      if(t.aceitoEm && ehUuid(t.aceiteId) && !ja.has(t.aceiteId)) linhas.push({ id: t.aceiteId, org_id: org, ambiente_id: mapaAmb[t.para && t.para.id] || null, tipo: 'aceite', ocorrido_em: t.aceitoEm,
+        dados: { transferencia: t.id, recebedor: t.recebedor, assinatura: t.assinatura, item: t.item } });
+    });
+    if(!linhas.length) return;
+    await postarEventos(linhas);
+    linhas.forEach(l => ja.add(l.id));
+    rec.enviados = Array.from(ja).slice(-10000);
+    await mapPut(rec);
   }
 
   /* ---------- Passo de sync (todos os pendentes) ---------- */
@@ -219,6 +286,7 @@
         await mapPut(rec);
       }
     }
+    try{ await enviarControle(); }catch(e){ console.warn('controle', e.message); }
     state.backoff = fail ? Math.min(state.backoff * 2, 120000) : 5000;
     report({ synced: ok, failed: fail, pending: pend.length - ok, total: ambientes.length });
     return { ok, fail };
