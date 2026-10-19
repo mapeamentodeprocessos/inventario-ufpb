@@ -156,6 +156,8 @@
       linha.levantamento_id = ehUuid(a.levantamentoId) ? a.levantamentoId : null;
       linha.processado_em = a.processado || null;
     }
+    // ambiente cadastrado na estrutura da unidade: só depois da migração 05
+    if(!semColunaLocal && a.orgId && ehUuid(a.localId)) linha.local_id = a.localId;
     return linha;
   }
   function mapItem(it, ambienteUuid, itemUuid, uid, fotoPath) {
@@ -196,7 +198,8 @@
     // 2) ambiente (sem as colunas novas, se o banco ainda não tiver a migração 04)
     try{ await upsert('ambientes', [mapAmbiente(a, uid, rec.uuid)]); }
     catch(e){
-      if(!semColunasLev && /levantamento_id|processado_em|PGRST204/i.test(e.message)){ semColunasLev = true; await upsert('ambientes', [mapAmbiente(a, uid, rec.uuid)]); }
+      if(!semColunaLocal && /local_id/i.test(e.message)){ semColunaLocal = true; await upsert('ambientes', [mapAmbiente(a, uid, rec.uuid)]); }
+      else if(!semColunasLev && /levantamento_id|processado_em|PGRST204/i.test(e.message)){ semColunasLev = true; await upsert('ambientes', [mapAmbiente(a, uid, rec.uuid)]); }
       else throw e;
     }
 
@@ -225,7 +228,7 @@
   /* ---------- Eventos: auditoria, termos e transferências ---------- */
   // Só existem no banco depois da migração 03. Cada evento tem id próprio e é
   // enviado uma vez; reenviar é inofensivo (o banco ignora o repetido).
-  let semTabelaEventos = false, semColunasLev = false, semTabelaLev = false;
+  let semTabelaEventos = false, semColunasLev = false, semTabelaLev = false, semColunaLocal = false;
   const ehUuid = v => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v || ''));
   async function postarEventos(linhas){
     if(!linhas.length || semTabelaEventos) return false;

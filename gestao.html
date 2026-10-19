@@ -309,7 +309,7 @@ html.retomando #abrindoPainel{display:flex}
       </div>
       <div class="painel org-bloco" id="estruturaPainel" style="display:none;margin-bottom:18px">
         <h3>Estrutura organizacional</h3>
-        <p class="sub">Unidades, setores, secretarias ou filiais. Os ambientes físicos são criados dentro delas, no app.</p>
+        <p class="sub">A hierarquia da organização: <b>unidades</b> (secretarias, diretorias, departamentos, setores, filiais) e, dentro de cada uma, os <b>ambientes</b> (salas, laboratórios, depósitos). Todo levantamento parte daqui. Para cadastrar ou corrigir um a um, use o app de campo em <b>Estrutura organizacional</b>.</p>
         <div id="eResumo" class="sub" style="margin:8px 0"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn mini pri" onclick="document.getElementById('eArq').click()">Importar planilha (Excel ou CSV)</button>
@@ -318,7 +318,7 @@ html.retomando #abrindoPainel{display:flex}
           <select id="eModelo" class="inp" style="width:auto;padding:6px 10px;font-size:12.5px"><option value="">Começar de um modelo pronto…</option><option value="prefeitura">Prefeitura</option><option value="universidade">Universidade ou instituto federal</option><option value="empresa">Empresa</option><option value="hospital">Hospital</option><option value="escola">Escola</option><option value="tribunal">Tribunal ou órgão de controle</option></select>
           <button class="btn mini" onclick="aplicarModeloEstrutura()">Aplicar modelo</button>
         </div>
-        <p class="sub" style="margin-top:8px">Planilha com as colunas <b>código</b>, <b>nome</b> e <b>código da unidade superior</b> (ou códigos com pontos, como 01.02.03, que já dizem quem é a superior).</p>
+        <p class="sub" style="margin-top:8px">Planilha com as colunas <b>código da unidade</b>, <b>unidade</b> e <b>código superior</b> (ou códigos com pontos, como 01.02.03, que já dizem quem é a superior). Para cadastrar também os ambientes, acrescente <b>ambiente</b>, <b>andar</b>, <b>bloco</b> e <b>tipo</b> — uma linha por ambiente, repetindo a unidade.</p>
         <div id="eArvore" class="arvore"></div>
       </div>
       <div class="painel org-bloco" id="membrosPainel" style="display:none;margin-bottom:18px">
@@ -830,12 +830,26 @@ async function carregarEstrutura(){
     }
     ESTRUTURA = todas;
   }catch(e){ res.textContent = "Não foi possível carregar a estrutura: " + e.message; return; }
-  res.innerHTML = ESTRUTURA.length ? `<b>${ESTRUTURA.length}</b> unidades cadastradas.` : "Nenhuma unidade cadastrada ainda. Importe uma planilha ou comece por um modelo pronto.";
+  // ambientes cadastrados (migração 05)
+  let locais = null;
+  try{
+    locais = [];
+    for(let ini = 0; ini < 200000; ini += 1000){
+      const parte = await sb(`/rest/v1/locais?org_id=eq.${ORG.id}&ativo=eq.true&select=unidade_code,nome&limit=1000&offset=${ini}`);
+      locais.push(...(parte||[])); if(!parte || parte.length < 1000) break;
+    }
+  }catch(e){ locais = null; }
+  const nAmb = new Map(); (locais || []).forEach(l => nAmb.set(l.unidade_code, (nAmb.get(l.unidade_code) || 0) + 1));
+  const temFilho = new Set(ESTRUTURA.map(u => u.parent_code).filter(Boolean));
+  const semAmb = ESTRUTURA.filter(u => !temFilho.has(u.code) && !nAmb.get(u.code)).length;
+  res.innerHTML = ESTRUTURA.length
+    ? `<b>${ESTRUTURA.length}</b> unidades · ` + (locais ? `<b>${locais.length}</b> ambientes cadastrados` + (semAmb ? ` · <span style="color:#B5651D">${semAmb} unidades finais sem ambientes</span>` : "") : `<span style="color:#B5651D">ambientes por unidade: rode a migração 05 no Supabase</span>`)
+    : "Nenhuma unidade cadastrada ainda. Importe uma planilha ou comece por um modelo pronto.";
   // árvore (mostra até 400 linhas)
   const filhos = new Map(); ESTRUTURA.forEach(u => { const k = u.parent_code || ""; if(!filhos.has(k)) filhos.set(k, []); filhos.get(k).push(u); });
   const codigos = new Set(ESTRUTURA.map(u => u.code)), linhas = [];
   const raiz = ESTRUTURA.filter(u => !u.parent_code || !codigos.has(u.parent_code));
-  (function desce(lst, n){ lst.forEach(u => { if(linhas.length >= 400) return; linhas.push(`<div style="padding-left:${n*16}px"><code>${esc(u.code)}</code>${esc(u.name)}</div>`); desce(filhos.get(u.code) || [], n + 1); }); })(raiz, 0);
+  (function desce(lst, n){ lst.forEach(u => { if(linhas.length >= 400) return; linhas.push(`<div style="padding-left:${n*16}px"><code>${esc(u.code)}</code>${esc(u.name)}${nAmb.get(u.code) ? ` <span class="sub" style="font-size:11px">· ${nAmb.get(u.code)} amb.</span>` : ""}</div>`); desce(filhos.get(u.code) || [], n + 1); }); })(raiz, 0);
   box.innerHTML = linhas.join("") + (ESTRUTURA.length > 400 ? `<div class="sub">… e mais ${ESTRUTURA.length - 400}</div>` : "");
 }
 function paiPeloCodigo(code, todos){
@@ -870,16 +884,32 @@ async function importarEstrutura(arq){
     const cCod = cab.find(h => h !== cPai && /^(codigo|cod|code|id|sigla)/.test(normG(h))) || acha(/codigo|cod\b|code/);
     const cNome = cab.find(h => h !== cCod && h !== cPai && /nome|name|unidade|setor|descri|denomina/.test(normG(h)));
     if(!cCod || !cNome) throw new Error("não achei as colunas de código e de nome (colunas encontradas: " + cab.join(", ") + ")");
-    const linhas = dados.map(d => ({ code: String(d[cCod]).trim(), name: String(d[cNome]).trim(), parent_code: cPai ? String(d[cPai]).trim() || null : null }))
-      .filter(l => l.code && l.name);
-    if(!confirm(`Importar ${linhas.length} unidades?\n\nCódigo: "${cCod}" · Nome: "${cNome}"${cPai ? ` · Superior: "${cPai}"` : " · Superior: pelos pontos do código"}\n\nUnidades com o mesmo código são atualizadas.`)){ carregarEstrutura(); return; }
+    const cAmb = cab.find(h => ![cCod, cNome, cPai].includes(h) && /^(ambiente|sala|local|localizacao|localidade|dependencia|espaco)/.test(normG(h)));
+    const cAnd = cab.find(h => /^(andar|pavimento|piso)/.test(normG(h))), cBlo = cab.find(h => /^(bloco|predio|edificio)/.test(normG(h)));
+    const cTip = cab.find(h => ![cCod, cNome, cPai, cAmb].includes(h) && /^tipo/.test(normG(h)));
+    const porCod = new Map();
+    dados.forEach(d => { const code = String(d[cCod]).trim(), name = String(d[cNome]).trim(); if(code && name && !porCod.has(code)) porCod.set(code, { code, name, parent_code: cPai ? String(d[cPai]).trim() || null : null }); });
+    const linhas = [...porCod.values()];
+    const ambs = cAmb ? [...new Map(dados.map(d => ({ unidade_code: String(d[cCod]).trim(), nome: String(d[cAmb]).trim(), andar: cAnd ? String(d[cAnd]).trim() : "", bloco: cBlo ? String(d[cBlo]).trim() : "", tipo: cTip ? String(d[cTip]).trim() : "" }))
+      .filter(a => a.unidade_code && a.nome).map(a => [a.unidade_code + "|" + normG(a.nome), a])).values()] : [];
+    if(!confirm(`Importar ${linhas.length} unidades${ambs.length ? " e " + ambs.length + " ambientes" : ""}?\n\nCódigo: "${cCod}" · Nome: "${cNome}"${cPai ? ` · Superior: "${cPai}"` : " · Superior: pelos pontos do código"}${cAmb ? ` · Ambiente: "${cAmb}"` : ""}\n\nUnidades e ambientes que já existem são atualizados.`)){ carregarEstrutura(); return; }
     res.textContent = "Gravando...";
     const n = await gravarEstrutura(linhas);
-    alert(n + " unidades gravadas."); carregarEstrutura();
+    let na = 0;
+    if(ambs.length){
+      try{
+        for(let i = 0; i < ambs.length; i += 500){
+          const lote = ambs.slice(i, i + 500).map(a => ({ org_id: ORG.id, unidade_code: a.unidade_code, nome: a.nome, andar: a.andar || null, bloco: a.bloco || null, tipo: a.tipo || null, ativo: true }));
+          await sb("/rest/v1/locais?on_conflict=org_id,unidade_code,nome", { method:"POST", headers:{ Prefer:"resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(lote) });
+          na += lote.length;
+        }
+      }catch(e){ alert("As unidades foram gravadas, mas os ambientes não: " + (/locais|PGRST205|42P01/.test(e.message) ? "rode a migração 05 no Supabase." : e.message)); }
+    }
+    alert(n + " unidades" + (ambs.length ? " e " + na + " ambientes" : "") + " gravados."); carregarEstrutura();
   }catch(e){ res.textContent = "Não foi possível importar: " + e.message; }
 }
 function baixarModeloEstrutura(){
-  const csv = "codigo;nome;codigo_superior\r\n01;SECRETARIA DE ADMINISTRAÇÃO;\r\n01.01;Departamento de Patrimônio;01\r\n01.02;Departamento de Compras;01\r\n02;SECRETARIA DE SAÚDE;\r\n02.01;Unidade Básica de Saúde Centro;02\r\n";
+  const csv = "codigo;unidade;codigo_superior;ambiente;andar;bloco;tipo\r\n01;SECRETARIA DE ADMINISTRAÇÃO;;;;;\r\n01.01;Departamento de Patrimônio;01;Sala 101;Térreo;A;Sala\r\n01.01;Departamento de Patrimônio;01;Almoxarifado;Térreo;A;Depósito / almoxarifado\r\n01.02;Departamento de Compras;01;Sala 201;1º andar;A;Sala\r\n02;SECRETARIA DE SAÚDE;;;;;\r\n02.01;Unidade Básica de Saúde Centro;02;Consultório 1;Térreo;;Sala\r\n";
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type:"text/csv" })); a.download = "modelo-estrutura.csv"; a.click();
 }
 const MODELOS_ESTRUTURA = {

@@ -1057,6 +1057,7 @@ setTimeout(function(){ document.documentElement.classList.remove('decidindo-tela
       <label>Unidade organizacional</label>
       <input type="text" class="search-input" id="unitSearchInput" placeholder="Buscar por nome ou código…">
       <div class="chips-row" id="selectedUnitsChips"></div>
+      <div id="ambCadastradosBox"></div>
       <div id="unitSearchResults" class="unit-search-results" style="display:none;"></div>
       <p class="field-hint" id="unitSearchHint">Busque na estrutura da organização pelo nome ou pelo código. É a unidade a que este levantamento pertence.</p>
     </div>
@@ -1395,6 +1396,21 @@ setTimeout(function(){ document.documentElement.classList.remove('decidindo-tela
   let currentCollectorName = '';
   let SIPAC_REFERENCE = []; // {plaqueta, plaquetaKey, descricao, localizacao}
   let selectedUnitsForNew = [];
+  let localEscolhido = null;   // ambiente cadastrado na estrutura (ESTRUTURA) escolhido para este ambiente
+  // ambientes cadastrados da unidade: tocar preenche o nome e o andar
+  function renderAmbCadastrados(){
+    const box = document.getElementById('ambCadastradosBox');
+    if(!box || !window.ESTRUTURA) return;
+    const u = selectedUnitsForNew[0] || window.MINHA_UNIDADE || null;
+    let camp = null; try{ camp = localStorage.getItem('campanha_ativa'); }catch(e){}
+    const usados = AMBIENTES.filter(a => a !== editingAmbiente && u && (a.units || []).some(x => x.code === u.code) && (!camp || a.campanhaId === camp)).map(a => a.name);
+    ESTRUTURA.montarSeletor(box, u, usados, loc => {
+      localEscolhido = loc;
+      ambienteNameInput.value = loc.nome;
+      if(!ambienteAndarInput.value.trim() || ambienteAndarInput.dataset.auto === '1'){ ambienteAndarInput.value = loc.andar || (loc.bloco ? 'Bloco ' + loc.bloco : ''); ambienteAndarInput.dataset.auto = '1'; }
+      renderAmbCadastrados();
+    }, localEscolhido && localEscolhido.id);
+  }
   let selectedModo = 'levantamento';
 
   const screenAmbientes = document.getElementById('screenAmbientes');
@@ -1831,7 +1847,7 @@ setTimeout(function(){ document.documentElement.classList.remove('decidindo-tela
   // (botão "+ Ambiente" do grupo), já chega com a unidade preenchida — o
   // ambiente nasce dentro da hierarquia certa.
   function abrirNovoAmbiente(unidadePre){
-    editingAmbiente = null;
+    editingAmbiente = null; localEscolhido = null; ambienteAndarInput.dataset.auto = '';
     newAmbienteScreenTitle.textContent = 'Novo ambiente';
     createAmbienteBtn.textContent = 'Criar ambiente e iniciar coleta';
     ambienteNameInput.value = '';
@@ -1851,7 +1867,7 @@ setTimeout(function(){ document.documentElement.classList.remove('decidindo-tela
   newAmbienteBtn.addEventListener('click', () => abrirNovoAmbiente(null));
 
   function openEditAmbiente(a){
-    editingAmbiente = a;
+    editingAmbiente = a; localEscolhido = null; ambienteAndarInput.dataset.auto = '';
     newAmbienteScreenTitle.textContent = 'Editar ambiente';
     createAmbienteBtn.textContent = 'Salvar alterações';
     ambienteNameInput.value = a.name;
@@ -1880,6 +1896,7 @@ setTimeout(function(){ document.documentElement.classList.remove('decidindo-tela
     window.scrollTo({top:0, behavior:'instant'});
   });
 
+  ambienteAndarInput.addEventListener('input', () => { ambienteAndarInput.dataset.auto = ''; });
   ambienteNameInput.addEventListener('input', () => {
     const excludeId = editingAmbiente ? editingAmbiente.id : null;
     const similar = findSimilarAmbientes(ambienteNameInput.value.trim(), excludeId);
@@ -1893,6 +1910,7 @@ setTimeout(function(){ document.documentElement.classList.remove('decidindo-tela
   });
 
   function renderSelectedChips(){
+    setTimeout(renderAmbCadastrados, 0);
     selectedUnitsChips.innerHTML = '';
     selectedUnitsForNew.forEach(u => {
       const chip = document.createElement('div');
@@ -2104,7 +2122,15 @@ setTimeout(function(){ document.documentElement.classList.remove('decidindo-tela
       window.MINHA_UNIDADE = unidadesDoAmbiente[0];
     }
 
+    // vínculo com a estrutura: o escolhido na lista, o de mesmo nome, ou cadastra (gestor/administrador)
+    let loc = (localEscolhido && normalize(localEscolhido.nome) === normalize(name)) ? localEscolhido : null;
+    const uEstr = unidadesDoAmbiente[0];
+    if(!loc && uEstr && window.ESTRUTURA){
+      loc = ESTRUTURA.locaisDe(uEstr.code).find(l => normalize(l.nome) === normalize(name)) || null;
+      if(!loc && (!editingAmbiente || !editingAmbiente.localId)) loc = await ESTRUTURA.cadastrarRapido(uEstr, { nome: name, andar: andar });
+    }
     if(editingAmbiente){
+      if(loc) editingAmbiente.localId = loc.id;
       editingAmbiente.name = name;
       editingAmbiente.andar = andar;
       editingAmbiente.modo = selectedModo;
@@ -2132,6 +2158,8 @@ setTimeout(function(){ document.documentElement.classList.remove('decidindo-tela
       createdBy: currentCollectorName || null,
       orgId: (window.ORG && window.ORG.id) || null,
       campanhaId: (function(){ try{ return localStorage.getItem('campanha_ativa') || null; }catch(e){ return null; } })(),
+      localId: loc ? loc.id : null,
+      foraDoCadastro: !loc && !!(window.ESTRUTURA && uEstr && ESTRUTURA.locaisDe(uEstr.code).length),
       createdAt: new Date().toISOString(),
       collectedBy: null,
       collectedAt: null
@@ -3493,6 +3521,7 @@ Liste apenas itens que você consegue ver com razoável clareza. Se dois itens f
 <!-- ===== Autenticação (Supabase Auth + Google) e escolha de campanha ===== -->
 <script src="sync.js"></script>
 <script src="controle.js"></script>
+<script src="estrutura.js"></script>
 <script src="levantamentos.js"></script>
 <script>
 (function(){

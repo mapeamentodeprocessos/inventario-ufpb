@@ -225,7 +225,7 @@
   /* ---------------- menu lateral ---------------- */
   const ITENS = [
     ['Principal'], ['inicio', '🏠', 'Início'],
-    ['Levantamento patrimonial'], ['iniciar', '＋', 'Iniciar levantamento'], ['levantamentos', '📋', 'Levantamentos'], ['ambientes', '🏢', 'Unidades e ambientes'],
+    ['Levantamento patrimonial'], ['estrutura', '🌳', 'Estrutura organizacional'], ['iniciar', '＋', 'Iniciar levantamento'], ['levantamentos', '📋', 'Levantamentos'], ['ambientes', '🏢', 'Unidades e ambientes'],
       ['importar', '↺', 'Importar levantamento anterior'], ['mapa', '🗺', 'Mapa dos ambientes'],
     ['Conferência e controle'], ['conciliacao', '⚖', 'Conciliação'], ['transferencias', '⇄', 'Transferências'], ['termos', '✍', 'Termos'], ['historico', '🕘', 'Histórico'],
     ['Dados'], ['base', '🗂', 'Base oficial e backup'], ['destinacao', '♻', 'Fila de destinação'],
@@ -250,14 +250,14 @@
     const p = aside.querySelector('[data-ir="painel"]'); if(p) p.style.display = (!o.id || ['supervisor','gestor','admin'].includes(o.papel)) ? '' : 'none';
   }
   const TITULO = { inicio:'Início', levantamentos:'Levantamentos', ambientes:'Unidades e ambientes', mapa:'Mapa dos ambientes', conciliacao:'Conciliação e controle',
-    transferencias:'Conciliação e controle', termos:'Conciliação e controle', historico:'Conciliação e controle', base:'Base oficial e backup', destinacao:'Fila de destinação', levantamento:'Levantamento' };
+    transferencias:'Conciliação e controle', termos:'Conciliação e controle', historico:'Conciliação e controle', base:'Base oficial e backup', destinacao:'Fila de destinação', levantamento:'Levantamento', estrutura:'Estrutura organizacional' };
   function marcar(dest){
     aside.querySelectorAll('[data-ir]').forEach(b => b.classList.toggle('on', b.dataset.ir === dest));
     $('baTitulo').textContent = TITULO[dest] || $('baTitulo').textContent;
   }
   function mostrar(id){ A().esconderTelas(); $(id).style.display = 'block'; window.scrollTo({ top:0, behavior:'instant' }); }
   // tela atual: ao apertar F5 o app volta para ela (vale só nesta aba do navegador)
-  const TELAS_FIXAS = ['inicio','levantamentos','ambientes','conciliacao','transferencias','termos','historico','base','destinacao'];
+  const TELAS_FIXAS = ['inicio','estrutura','levantamentos','ambientes','conciliacao','transferencias','termos','historico','base','destinacao'];
   const lembrar = t => { try{ sessionStorage.setItem('app_tela', JSON.stringify(t)); }catch(e){} };
   window.lembrarTela = lembrar;
   async function irPara(dest){
@@ -271,6 +271,7 @@
       case 'mapa': A().abrirTela('ambientes'); $('viewMapBtn').click(); break;
       case 'conciliacao': case 'transferencias': case 'termos': case 'historico': C().abrir(dest); break;
       case 'base': mostrar('screenBase'); break;
+      case 'estrutura': mostrar('screenEstrutura'); if(window.ESTRUTURA){ ESTRUTURA.render(); ESTRUTURA.carregar().then(() => ESTRUTURA.render()); } break;
       case 'destinacao': A().abrirTela('destinacao'); break;
       case 'perfil': $('btnPerfil').click(); return;
       case 'organizacao': if(window.trocarOrganizacao) window.trocarOrganizacao(); return;
@@ -293,7 +294,10 @@
     const pend = itens.filter(i => i.status === 'pending').length, herdPend = itens.filter(i => i.status === 'pending' && i.herdado).length;
     let ultimo = null; try{ const id = localStorage.getItem('ultimo_ambiente'); ultimo = ambs.find(a => String(a.id) === id); }catch(e){}
     const nome = (A().quemSou() || '').split(/[ @]/)[0];
-    $('inicioConteudo').innerHTML = `
+    const nUn = A().unidades().length, E = window.ESTRUTURA, nAmbCad = E ? A().unidades().reduce((t, u) => t + E.locaisDe(u.code).length, 0) : 0;
+    const avisoEstr = !nUn ? `<div class="es-aviso" style="margin-bottom:14px"><b>Cadastre a estrutura organizacional primeiro.</b> O levantamento é feito por unidade e pelos ambientes de cada unidade.
+        ${E && E.podeEditar() ? '<br><button class="lv-btn" type="button" data-ir2="estrutura" style="margin-top:8px">🌳 Cadastrar estrutura</button>' : '<br>Peça à gestão patrimonial (gestor ou administrador) para cadastrá-la.'}</div>` : '';
+    $('inicioConteudo').innerHTML = avisoEstr + `
       <div class="lv-saudacao">Olá${nome && nome !== 'não' ? ', ' + esc(nome) : ''}</div>
       <p class="lv-sub">${esc(org().nome || 'Levantamento patrimonial')}${org().papel ? ' · seu papel: ' + esc(org().papel) : ''}</p>
       <div class="lv-kpis">
@@ -308,11 +312,12 @@
         ${ultimo ? `<button class="lv-acao" data-amb="${ultimo.id}"><span class="t">▶ Continuar coleta</span><span class="d">${esc(ultimo.name)}</span></button>` : ''}
         <button class="lv-acao" data-ir2="importar"><span class="t">↺ Importar levantamento anterior</span><span class="d">Use o do ano passado como ponto de partida</span></button>
         <button class="lv-acao" data-ir2="levantamentos"><span class="t">📋 Levantamentos</span><span class="d">Editar, processar, excluir</span></button>
+        <button class="lv-acao" data-ir2="estrutura"><span class="t">🌳 Estrutura organizacional</span><span class="d">${nUn} unidades · ${nAmbCad} ambientes cadastrados</span></button>
         <button class="lv-acao" data-ir2="conciliacao"><span class="t">⚖ Conciliação</span><span class="d">Achado em campo × base oficial</span></button>
       </div>
       <div class="lv-titulo">Em andamento</div>
       <div id="inicioLevs">${andamento.length ? andamento.slice(0, 6).map(cartao).join('') : `<div class="lv-vazio">Nenhum levantamento em andamento.
-        <ol class="lv-passos"><li>Toque em <b>Iniciar levantamento</b> e escolha a unidade e a campanha.</li><li>Se houver levantamento do ano anterior, importe-o como ponto de partida.</li>
+        <ol class="lv-passos"><li>Confira a <b>estrutura organizacional</b>: as unidades e os ambientes de cada uma.</li><li>Toque em <b>Iniciar levantamento</b> e escolha a unidade e a campanha.</li><li>Se houver levantamento do ano anterior, importe-o como ponto de partida.</li>
         <li>Crie os ambientes (salas) e lance ou confirme os bens.</li><li>Ao final, <b>processe</b> o levantamento para fechar o resultado.</li></ol></div>`}</div>`;
     ligarCartoes($('inicioLevs'));
     $('inicioConteudo').querySelectorAll('[data-ir2]').forEach(b => b.onclick = () => irPara(b.dataset.ir2));
@@ -422,7 +427,8 @@
     const com = (l.comissao || []).concat([{}, {}, {}, {}]).slice(0, 4);
     return `
       ${novo ? `<div class="ctl-campo"><label>Unidade *</label><input id="fUnidBusca" placeholder="Buscar pelo nome ou pelo código…" autocomplete="off"></div>
-      <div id="fUnidRes" class="lv-res" style="display:none"></div><div class="ctl-dica" id="fUnidSel">${l.unidade ? '✓ ' + esc(l.unidade.name) : 'Nenhuma unidade escolhida.'}</div>` : ''}
+      <div id="fUnidRes" class="lv-res" style="display:none"></div><div class="ctl-dica" id="fUnidSel">${l.unidade ? '✓ ' + esc(l.unidade.name) : 'Nenhuma unidade escolhida.'}</div>
+      <div id="fUnidAmb"></div>` : ''}
       <div class="ctl-campo"><label>Tipo de levantamento *</label><select id="fTipo">${opcoesTipos(l.finalidade || '')}</select>
         <div class="ctl-dica" id="fTipoDesc">${esc(descTipo(l.finalidade || ''))}</div></div>
       <div class="ctl-campo"><label>Campanha *</label><select id="fCamp">${opcoesCampanhas(l.campanhaId, novo, l.finalidade || '')}</select>
@@ -481,19 +487,72 @@
       res.querySelectorAll('[data-c]').forEach(d => d.onclick = () => { const u = A().unidades().find(x => x.code === d.dataset.c); onEscolher(u); res.style.display = 'none'; inp.value = ''; });
     };
   }
+  // sem hierarquia não há levantamento: guia para cadastrar
+  function exigirEstrutura(){
+    if(A().unidades().length) return true;
+    const E = window.ESTRUTURA, ed = E && E.podeEditar();
+    ui().abrirModal('Cadastre a estrutura organizacional', `
+      <p class="ctl-dica" style="font-size:13.5px;line-height:1.55">Todo levantamento é feito <b>por unidade</b> (secretaria, diretoria, departamento, setor…) e pelos <b>ambientes</b> de cada unidade (salas, laboratórios, depósitos). Esta organização ainda não tem a estrutura cadastrada.</p>
+      ${ed ? `<ol class="lv-passos" style="margin:8px 0 14px"><li>Cadastre as <b>unidades</b>, uma a uma ou importando a planilha.</li><li>Em cada unidade, cadastre os <b>ambientes</b>.</li><li>Volte aqui e inicie o levantamento.</li></ol>
+        <button class="btn btn-primary btn-full" id="fEstr" type="button">🌳 Cadastrar a estrutura agora</button>`
+        : '<p class="ctl-dica">Só gestores e administradores cadastram a estrutura. Peça à gestão patrimonial da sua organização.</p>'}`);
+    if(ed) $('fEstr').onclick = () => { ui().fecharModal(); irPara('estrutura'); };
+    return false;
+  }
+  // mostra os ambientes cadastrados da unidade escolhida (e permite cadastrar ali mesmo)
+  function painelAmbientesDaUnidade(l){
+    const box = $('fUnidAmb'); if(!box) return;
+    const E = window.ESTRUTURA, u = l.unidade;
+    if(!u || !E){ box.innerHTML = ''; atualizarOrigem(0); return; }
+    const ls = E.locaisDe(u.code), ed = E.podeEditar() && !E.semTabela;
+    box.innerHTML = ls.length
+      ? `<div class="es-aviso es-ok" style="margin:4px 0 12px"><b>${ls.length} ambiente(s) cadastrado(s)</b> nesta unidade: ${ls.slice(0, 6).map(x => esc(x.nome)).join(', ')}${ls.length > 6 ? '…' : ''}
+          ${ed ? '<br><button class="lv-btn" type="button" id="fAmbMais" style="margin-top:6px">＋ Cadastrar mais ambientes</button>' : ''}</div>`
+      : `<div class="es-aviso" style="margin:4px 0 12px"><b>Esta unidade não tem ambientes cadastrados.</b> ${ed
+          ? 'Cadastre-os abaixo (um por linha) — eles entram na estrutura e já viram os ambientes do levantamento:<textarea id="fAmbNovos" rows="4" style="width:100%;margin-top:8px;font:inherit;padding:8px;border-radius:8px;border:1px solid var(--border)" placeholder="Sala 101; Térreo&#10;Laboratório; 1º andar&#10;Almoxarifado"></textarea><small>Em cada linha: nome; andar; bloco (andar e bloco são opcionais).</small>'
+          : 'Os ambientes podem ser criados em campo, durante a coleta. Peça à gestão para cadastrá-los na estrutura.'}</div>`;
+    const mais = $('fAmbMais'); if(mais) mais.onclick = () => { const txt = prompt('Novos ambientes de ' + u.name + ' (separe por vírgula):'); if(!txt) return;
+      E.gravarLocais(txt.split(',').map(x => x.trim()).filter(Boolean).map(nome => ({ unidade_code: u.code, nome }))).then(() => painelAmbientesDaUnidade(l)).catch(e => alert('Não foi possível cadastrar: ' + e.message)); };
+    const novos = $('fAmbNovos'); if(novos) novos.oninput = () => atualizarOrigem(novos.value.trim() ? 1 : 0);
+    atualizarOrigem(ls.length);
+  }
+  function atualizarOrigem(n){
+    const r = document.querySelector('[name="fOrig"][value="cadastro"]'); if(!r) return;
+    const lab = r.closest('label'); r.disabled = !n; lab.style.opacity = n ? '' : '.5';
+    const sm = lab.querySelector('small'); if(sm) sm.textContent = n ? 'Cria os ambientes do levantamento a partir dos ambientes cadastrados da unidade (' + (n > 1 || !$('fAmbNovos') ? n + ' ambiente(s)' : 'os que você escreveu acima') + ').' : 'A unidade não tem ambientes cadastrados.';
+    if(n && !r._mexeu) r.checked = true;
+    if(!n && r.checked) document.querySelector('[name="fOrig"][value="zero"]').checked = true;
+  }
+  // cria os ambientes do levantamento a partir dos cadastrados da unidade
+  async function fonteCadastro(lev){
+    const E = window.ESTRUTURA; if(!E || !lev.unidade) return 0;
+    const existentes = ambsDe(lev).map(a => norm(a.name));
+    let n = 0;
+    for(const loc of E.locaisDe(lev.unidade.code)){
+      if(existentes.includes(norm(loc.nome))) continue;
+      const a = A().criarAmbiente({ name: loc.nome, andar: loc.andar || (loc.bloco ? 'Bloco ' + loc.bloco : ''), modo: 'levantamento', units: [lev.unidade],
+        campanhaId: lev.campanhaId || null, levantamentoId: lev.id, localId: loc.id, bloco: loc.bloco || '', tipoAmbiente: loc.tipo || '', origemImportacao: 'estrutura da unidade' });
+      await A().salvar(a); n++;
+    }
+    return n;
+  }
   async function iniciarLevantamento(pre){
     await carregar();
+    if(!exigirEstrutura()) return;
     const l = Object.assign({ unidade: null, campanhaId: localStorage.getItem('campanha_ativa') || '' }, pre || {});
     const corpo = ui().abrirModal('Iniciar levantamento patrimonial', formLev(l, true) + `
       <div class="ctl-campo"><label>Ponto de partida</label></div>
       <div class="lv-origem">
+        <label><input type="radio" name="fOrig" value="cadastro"><span>Ambientes cadastrados da unidade<small>Escolha a unidade acima.</small></span></label>
         <label><input type="radio" name="fOrig" value="zero" checked><span>Começar do zero<small>Os ambientes e bens são lançados em campo.</small></span></label>
         <label><input type="radio" name="fOrig" value="anterior"><span>Importar o levantamento anterior<small>Traz os ambientes e bens do ano passado como pendentes de conferência.</small></span></label>
         <label><input type="radio" name="fOrig" value="base"><span>Partir da base oficial<small>Cria os ambientes pelos locais da base do ${esc(A().sis())} desta unidade.</small></span></label>
         <label><input type="radio" name="fOrig" value="arquivo"><span>Importar de arquivo<small>Planilha de bens por local (ex.: exportada do sistema patrimonial) ou backup do app.</small></span></label>
       </div>
       <button class="btn btn-primary btn-full" id="fOk" type="button">Iniciar levantamento</button><div class="ctl-dica" id="fMsg"></div>`);
-    buscaUnidade(u => { l.unidade = { code: u.code, name: u.name, path: u.path || '' }; $('fUnidSel').textContent = '✓ ' + u.name; });
+    buscaUnidade(u => { l.unidade = { code: u.code, name: u.name, path: u.path || '' }; $('fUnidSel').textContent = '✓ ' + u.name; painelAmbientesDaUnidade(l); });
+    corpo.querySelectorAll('[name="fOrig"]').forEach(r => r.addEventListener('change', () => { const c = corpo.querySelector('[name="fOrig"][value="cadastro"]'); if(c) c._mexeu = true; }));
+    painelAmbientesDaUnidade(l);
     // tipo sugerido pela campanha ativa
     if(l.campanhaId && !l.finalidade){ const fc = finalidadeCamp(l.campanhaId); if(fc){ const t = TIPOS().find(x => mesmoTipo(x.nome, fc)); l.finalidade = t ? t.nome : fc; $('fTipo').innerHTML = opcoesTipos(t ? t.nome : fc); } }
     ligarTipo(l, true);
@@ -513,9 +572,17 @@
       ativarCampanha(camp);
       await gravar();
       const origem = (corpo.querySelector('[name="fOrig"]:checked') || {}).value;
+      // ambientes escritos no assistente: entram na estrutura da unidade
+      const novos = $('fAmbNovos') ? $('fAmbNovos').value.split(/\r?\n/).map(x => x.trim()).filter(Boolean) : [];
+      if(novos.length && window.ESTRUTURA){
+        try{ await ESTRUTURA.gravarLocais(novos.map(t => { const p = t.split(/\s*;\s*/); return { unidade_code: lev.unidade.code, nome: p[0], andar: p[1] || '', bloco: p[2] || '' }; })); }
+        catch(e){ alert('Os ambientes não foram cadastrados na estrutura (' + e.message + '). Eles serão criados só neste levantamento.');
+          for(const t of novos){ const p = t.split(/\s*;\s*/); const a = A().criarAmbiente({ name: p[0], andar: p[1] || '', units: [lev.unidade], campanhaId: lev.campanhaId, levantamentoId: lev.id }); await A().salvar(a); } }
+      }
       ui().fecharModal();
+      if(origem === 'cadastro') await fonteCadastro(lev);
       abrirLev(lev);
-      if(origem && origem !== 'zero') escolherFonte(lev, origem);
+      if(origem && origem !== 'zero' && origem !== 'cadastro') escolherFonte(lev, origem);
     };
   }
   function editarLev(l){
@@ -843,7 +910,7 @@
 
   /* ---------------- início ---------------- */
   window.LEV = {
-    vincular, irPara, abrirLev, todos: () => LEVS, recarregar: carregar, iniciar: iniciarLevantamento,
+    vincular, irPara, abrirLev, fonteCadastro, todos: () => LEVS, recarregar: carregar, iniciar: iniciarLevantamento,
     async importarLista(lista){ LEVS = lista; await gravar(); },
     abrirDaUnidade(u){ const l = LEVS.find(x => x.status !== 'processado' && x.unidade && x.unidade.code === u.code) || LEVS.find(x => x.unidade && x.unidade.code === u.code); if(l) abrirLev(l); else iniciarLevantamento({ unidade: { code: u.code, name: u.name, path: u.path || '' } }); },
     async aoIniciar(){
@@ -851,6 +918,7 @@
     },
     async _iniciar(){
       await carregar();
+      if(window.ESTRUTURA) ESTRUTURA.carregar().catch(() => {});
       await garantirVinculos();
       atualizarCabecalho();
       // F5: volta para a tela em que estava; senão, Início (a menos que o app tenha reaberto um ambiente)
@@ -867,6 +935,6 @@
     }
   };
   const _orgAntes = window.atualizarListaDaOrg;
-  window.atualizarListaDaOrg = () => { if(_orgAntes) _orgAntes(); atualizarCabecalho(); carregar().then(() => { CAMPANHAS = []; try{ CAMPANHAS = JSON.parse(localStorage.getItem(chaveCamp()) || '[]'); }catch(e){} renderAtual(); }); };
+  window.atualizarListaDaOrg = () => { if(_orgAntes) _orgAntes(); atualizarCabecalho(); if(window.ESTRUTURA) ESTRUTURA.carregar().catch(() => {}); carregar().then(() => { CAMPANHAS = []; try{ CAMPANHAS = JSON.parse(localStorage.getItem(chaveCamp()) || '[]'); }catch(e){} renderAtual(); }); };
   atualizarCabecalho();
 })();
