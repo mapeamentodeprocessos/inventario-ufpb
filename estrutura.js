@@ -27,9 +27,23 @@
   function lerCache(){ try{ LOCAIS = JSON.parse(localStorage.getItem(CH()) || '[]') || []; }catch(e){ LOCAIS = []; } }
   function gravarCache(){ try{ localStorage.setItem(CH(), JSON.stringify(LOCAIS)); }catch(e){} }
   const naoExiste = e => /locais|PGRST205|PGRST204|42P01|does not exist|schema cache|Could not find/i.test(String(e && e.message || e));
+  // confere no banco o papel de quem está usando (o guardado no aparelho pode estar desatualizado)
+  async function atualizarPapel(){
+    const s = ui().sessao(); if(!s || !s.user || !s.user.id || !org().id) return;
+    try{
+      const r = await ui().nuvem('/rest/v1/membros?org_id=eq.' + org().id + '&user_id=eq.' + s.user.id + '&ativo=eq.true&select=papel');
+      const papel = r && r[0] && r[0].papel;
+      if(papel && window.ORG && window.ORG.papel !== papel){
+        window.ORG.papel = papel;
+        try{ const o = JSON.parse(localStorage.getItem('org_ativa') || 'null'); if(o && o.id === window.ORG.id){ o.papel = papel; localStorage.setItem('org_ativa', JSON.stringify(o)); } }catch(e){}
+      }
+    }catch(e){}
+  }
+  const quemSou = () => { const s = ui().sessao(); return (s && s.user && (s.user.email || s.user.nomeGoogle)) || 'esta conta'; };
   async function carregar(){
     lerCache();
     if(!org().id || !navigator.onLine || !ui().sessao()) { carregado = true; return LOCAIS; }
+    await atualizarPapel();
     try{
       const todas = [];
       for(let ini = 0; ini < 200000; ini += 1000){
@@ -52,7 +66,7 @@
   }
   function exigirNuvem(){
     if(!org().id){ alert('A estrutura é da organização: entre numa organização para cadastrar.'); return false; }
-    if(!podeEditar()){ alert('Só gestores e administradores da organização alteram a estrutura. Fale com a gestão patrimonial.'); return false; }
+    if(!podeEditar()){ alert('Você entrou como ' + quemSou() + ', com o papel "' + (org().papel || 'sem papel') + '" nesta organização.\n\nCadastrar, importar e alterar a estrutura é só para gestor ou administrador. O administrador muda o papel no painel de gestão, em Administração → Membros.'); return false; }
     if(!navigator.onLine){ alert('Sem internet. A estrutura é compartilhada com toda a equipe, por isso é cadastrada com o aparelho conectado.'); return false; }
     return true;
   }
@@ -116,6 +130,18 @@
   .es-aviso{background:#FFF7E8;border:1px solid #F0D9A8;color:#7A4B00;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:12px}
   .es-ok{background:var(--success-bg,#E8F2EC);border:1px solid #c4dccb;color:var(--verde,#1A4731)}
   .es-marca{background:#FFF1C9;border-radius:3px}
+  .es-abas{display:flex;gap:4px;margin:4px 0 10px;border-bottom:1px solid var(--border)}
+  .es-abas button{font-family:inherit;font-size:13px;font-weight:600;padding:8px 12px;border:0;border-bottom:2px solid transparent;background:none;color:var(--text-muted);cursor:pointer}
+  .es-abas button.on{color:var(--verde,#1A4731);border-bottom-color:var(--verde,#1A4731)}
+  .es-tab{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .es-tab th{text-align:left;font-family:var(--font-mono,monospace);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);padding:8px;border-bottom:1px solid var(--border);background:var(--bg-main,#F6F3EC)}
+  .es-tab td{padding:8px;border-bottom:1px solid var(--border-soft,#ECE8DD);vertical-align:top}
+  .es-tab tr[data-un]{cursor:pointer}
+  .es-tab tr[data-un]:hover td{background:var(--success-bg,#E8F2EC)}
+  .es-tab td code{font-family:var(--font-mono,monospace);font-size:11px;color:var(--text-muted)}
+  .es-tab td small{display:block;color:var(--text-faint);font-size:11px}
+  .es-mais{display:block;margin:10px auto;font-family:inherit}
+  .lv-btn.pri{background:var(--verde,#1A4731);color:#fff;border-color:var(--verde,#1A4731)}
   .es-sel{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .es-sel button{font-family:inherit;font-size:12.5px;padding:6px 10px;border-radius:16px;border:1px solid var(--border);background:var(--bg-card);cursor:pointer;color:var(--text-primary)}
   .es-sel button.on{border-color:var(--verde,#1A4731);background:var(--success-bg,#E8F2EC);font-weight:600}
@@ -129,13 +155,24 @@
     <p class="lv-sub">A hierarquia da organização: as <b>unidades</b> (secretarias, diretorias, departamentos, setores…) e, dentro de cada uma, os <b>ambientes</b> (salas, laboratórios, depósitos…). Todo levantamento parte daqui.</p>
     <div class="lv-kpis" id="esResumo"></div>
     <div id="esAviso"></div>
-    <div class="lv-btns" id="esAcoes" style="margin-bottom:10px"></div>
-    <div class="ctl-barra"><input type="search" id="esBusca" placeholder="Buscar unidade, código ou ambiente…"></div>
+    <div class="lv-btns" id="esAcoes" style="margin-bottom:10px">
+      <button class="lv-btn pri" type="button" data-a="nova">＋ Cadastrar unidade</button>
+      <button class="lv-btn" type="button" data-a="importar">⇪ Importar estrutura</button>
+      <button class="lv-btn" type="button" data-a="exportar">⇩ Exportar estrutura</button>
+      <button class="lv-btn" type="button" data-a="modelo">⇩ Planilha modelo</button>
+    </div>
+    <div class="es-abas"><button type="button" data-v="lista" class="on">Lista de cadastradas</button><button type="button" data-v="arvore">Hierarquia (árvore)</button></div>
+    <div class="ctl-barra"><input type="search" id="esBusca" placeholder="Buscar unidade, código ou ambiente…">
+      <select id="esFiltro"><option value="">Todas</option><option value="com">Com ambientes</option><option value="sem">Sem ambientes</option></select></div>
     <div id="esArvore"></div>`;
   if(app) app.appendChild(tela);
 
   const ABERTOS = new Set();
-  let filtro = '';
+  let filtro = '', visao = 'lista', filtroAmb = '', limite = 100;
+  try{ visao = localStorage.getItem('estrutura_visao') || 'lista'; }catch(e){}
+  tela.querySelectorAll('.es-abas [data-v]').forEach(b => b.onclick = () => { visao = b.dataset.v; limite = 100; try{ localStorage.setItem('estrutura_visao', visao); }catch(e){} render(); });
+  tela.querySelector('#esFiltro').onchange = e => { filtroAmb = e.target.value; limite = 100; render(); };
+  tela.querySelectorAll('#esAcoes [data-a]').forEach(b => b.onclick = () => ({ nova: () => formUnidade(null, null, true), importar: importarPlanilha, modelo: baixarModelo, exportar })[b.dataset.a]());
   function filhosMapa(){
     const us = unidades(), cods = new Set(us.map(u => u.code)), m = new Map();
     us.forEach(u => { const p = u.parent_code && cods.has(u.parent_code) ? u.parent_code : ''; if(!m.has(p)) m.set(p, []); m.get(p).push(u); });
@@ -155,19 +192,15 @@
     if(!us.length) avisos.push(ed
       ? '<b>A organização ainda não tem estrutura.</b> Cadastre as unidades (uma a uma, ou importando a planilha) e depois os ambientes de cada unidade. Sem a estrutura não é possível iniciar levantamentos.'
       : '<b>A organização ainda não tem estrutura cadastrada.</b> Peça à gestão patrimonial (gestor ou administrador) para cadastrar as unidades e os ambientes.');
-    else if(!ed) avisos.push('Só gestores e administradores alteram a estrutura. Se faltar uma unidade ou um ambiente, fale com a gestão patrimonial.');
+    else if(!ed) avisos.push('Você entrou como <b>' + esc(quemSou()) + '</b>' + (org().papel ? ', com o papel <b>' + esc(org().papel) + '</b>' : '') + '. Você pode consultar e exportar a estrutura; cadastrar, importar e alterar é só para <b>gestor</b> ou <b>administrador</b> (o administrador muda o papel no painel de gestão, em Administração → Membros).');
     if(semTabela && ed) avisos.push('O cadastro de ambientes por unidade ainda não foi ativado no banco: rode a <b>migração 05</b> no Supabase. As unidades já podem ser cadastradas.');
     if(ed && !navigator.onLine) avisos.push('Sem internet: a estrutura pode ser consultada, mas só é alterada com o aparelho conectado.');
     $('esAviso').innerHTML = avisos.map(t => `<div class="es-aviso">${t}</div>`).join('');
-    $('esAcoes').innerHTML = (ed ? `<button class="lv-btn" type="button" data-a="raiz">＋ Unidade principal</button>
-      <button class="lv-btn" type="button" data-a="importar">⇪ Importar planilha</button>` : '') +
-      `<button class="lv-btn" type="button" data-a="modelo">⇩ Planilha modelo</button>
-       <button class="lv-btn" type="button" data-a="exportar">⇩ Exportar estrutura</button>
-       ${us.length ? '<button class="lv-btn" type="button" data-a="expandir">Expandir / recolher</button>' : ''}`;
-    $('esAcoes').querySelectorAll('[data-a]').forEach(b => b.onclick = () => ({ raiz: () => formUnidade(null, null), importar: importarPlanilha, modelo: baixarModelo,
-      exportar: exportar, expandir: () => { if(ABERTOS.size) ABERTOS.clear(); else us.forEach(u => ABERTOS.add(u.code)); render(); } })[b.dataset.a]());
+    tela.querySelectorAll('#esAcoes [data-a="nova"],#esAcoes [data-a="importar"]').forEach(b => { b.style.opacity = ed ? '' : '.55'; b.title = ed ? '' : 'Só gestor ou administrador'; });
+    tela.querySelectorAll('.es-abas [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === visao));
     const m = filhosMapa();
     let html = '';
+    if(visao === 'lista'){ $('esArvore').innerHTML = listaHtml(us, m, ed); ligarLista(); return; }
     if(filtro.length >= 2){
       // busca: unidades e ambientes que batem, com o caminho
       const q = norm(filtro);
@@ -179,6 +212,36 @@
     }
     $('esArvore').innerHTML = html;
     ligar();
+  }
+  // visão em lista: todas as unidades cadastradas, com superior e ambientes
+  function listaHtml(us, m, ed){
+    const q = norm(filtro);
+    let lst = us.slice().sort((a, b) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric:true }));
+    if(q.length >= 1) lst = lst.filter(u => norm(u.name).includes(q) || norm(u.code).includes(q) || locaisDe(u.code).some(l => norm(l.nome).includes(q)));
+    if(filtroAmb) lst = lst.filter(u => filtroAmb === 'com' ? locaisDe(u.code).length : !locaisDe(u.code).length);
+    if(!us.length) return '<div class="lv-vazio">Nenhuma unidade cadastrada ainda. Use <b>＋ Cadastrar unidade</b> ou <b>⇪ Importar estrutura</b>.</div>';
+    if(!lst.length) return '<div class="lv-vazio">Nada encontrado.</div>';
+    const porCod = new Map(us.map(u => [u.code, u]));
+    const linhas = lst.slice(0, limite).map(u => {
+      const sup = u.parent_code && porCod.get(u.parent_code), ambs = locaisDe(u.code), subs = (m.get(u.code) || []).length;
+      return `<tr data-un="${esc(u.code)}"><td><code>${marca(u.code, q)}</code></td><td><b>${marca(u.name, q)}</b>${subs ? '<small>' + subs + ' subunidade(s)</small>' : ''}</td>
+        <td>${sup ? esc(sup.name) + '<small>' + esc(sup.code) + '</small>' : '<small>— topo —</small>'}</td>
+        <td>${ambs.length ? '<b style="color:var(--verde,#1A4731)">' + ambs.length + '</b><small>' + ambs.slice(0, 3).map(l => esc(l.nome)).join(', ') + (ambs.length > 3 ? '…' : '') + '</small>' : '<span style="color:#B5651D">nenhum</span>'}</td></tr>`;
+    }).join('');
+    return `<p class="lv-sub" style="margin:0 0 8px">${lst.length} unidade(s)${lst.length > limite ? ' — mostrando ' + limite : ''}. Toque numa unidade para ver os ambientes${ed ? ' e editar' : ''}.</p>
+      <div style="overflow-x:auto"><table class="es-tab"><thead><tr><th>Código</th><th>Unidade</th><th>Superior</th><th>Ambientes</th></tr></thead><tbody>${linhas}</tbody></table></div>
+      ${lst.length > limite ? '<button class="lv-btn es-mais" type="button" id="esMais">Mostrar mais ' + Math.min(100, lst.length - limite) + '</button>' : ''}`;
+  }
+  function ligarLista(){
+    const arv = $('esArvore');
+    arv.querySelectorAll('tr[data-un]').forEach(tr => tr.onclick = () => abrirUnidadeNaArvore(tr.dataset.un));
+    const mais = $('esMais'); if(mais) mais.onclick = () => { limite += 100; render(); };
+  }
+  function abrirUnidadeNaArvore(code){
+    let c = code; while(c){ ABERTOS.add(c); const u = unPorCodigo(c); c = u && u.parent_code; }
+    visao = 'arvore'; filtro = ''; const b = $('esBusca'); if(b) b.value = '';
+    render();
+    setTimeout(() => { const el = document.querySelector('#esArvore [data-un="' + (window.CSS && CSS.escape ? CSS.escape(code) : code) + '"]'); if(el){ el.scrollIntoView({ block:'center' }); el.style.outline = '2px solid var(--verde,#1A4731)'; } }, 50);
   }
   function marca(txt, q){
     const t = esc(txt); if(!q) return t;
@@ -217,7 +280,7 @@
       try{ await alterarLocal(l, { ativo:false }); render(); }catch(e){ alert('Não foi possível desativar: ' + e.message); }
     });
   }
-  $('esBusca') && ($('esBusca').oninput = e => { filtro = e.target.value.trim(); render(); });
+  $('esBusca') && ($('esBusca').oninput = e => { filtro = e.target.value.trim(); limite = 100; render(); });
 
   /* ---------------- formulários ---------------- */
   function proximoCodigo(pai){
@@ -228,12 +291,16 @@
     let c; do{ c = pref + String(n++).padStart(2, '0'); } while(usados.has(c));
     return c;
   }
-  function formUnidade(u, pai){
+  function formUnidade(u, pai, escolherSuperior){
     if(!exigirNuvem()) return;
     const novo = !u;
     const superior = novo ? pai : unPorCodigo(u.parent_code);
+    const rotulo = x => x.code + ' · ' + x.name;
     ui().abrirModal(novo ? (pai ? 'Nova subunidade' : 'Nova unidade principal') : 'Editar unidade', `
-      ${superior ? `<div class="lv-info"><b>Unidade superior</b> ${esc(superior.name)} <small>(${esc(superior.code)})</small></div>` : (novo ? '<p class="ctl-dica">Unidade do topo da hierarquia (ex.: Reitoria, Secretaria, Diretoria, Matriz).</p>' : '')}
+      ${escolherSuperior ? `<div class="ctl-campo"><label>Unidade superior (deixe vazio para o topo da hierarquia)</label>
+          <input id="euSup" list="euSupLista" placeholder="Digite o nome ou o código da unidade de cima…" autocomplete="off">
+          <datalist id="euSupLista">${unidades().map(x => `<option value="${esc(rotulo(x))}">`).join('')}</datalist></div>`
+        : superior ? `<div class="lv-info"><b>Unidade superior</b> ${esc(superior.name)} <small>(${esc(superior.code)})</small></div>` : (novo ? '<p class="ctl-dica">Unidade do topo da hierarquia (ex.: Reitoria, Secretaria, Diretoria, Matriz).</p>' : '')}
       <div class="ctl-campo"><label>Nome da unidade *</label><input id="euNome" maxlength="200" value="${esc(u ? u.name : '')}" placeholder="Ex.: Departamento de Patrimônio"></div>
       <div class="ctl-campo"><label>Código ${novo ? '*' : '(não muda)'}</label><input id="euCod" maxlength="60" value="${esc(u ? u.code : proximoCodigo(pai))}" ${novo ? '' : 'disabled'}>
         <div class="ctl-dica">${novo ? 'Sugestão automática. Pode usar o código do seu sistema (SIPAC, SIADS, TOTVS…).' : ''}</div></div>
@@ -242,8 +309,16 @@
       <button class="btn btn-primary btn-full" id="euOk" type="button">${novo ? 'Cadastrar unidade' : 'Salvar'}</button>
       ${!novo ? '<button class="btn btn-secondary btn-full" id="euDesat" type="button" style="margin-top:8px">Desativar unidade</button>' : ''}
       <div class="ctl-dica" id="euMsg"></div>`);
+    let paiEscolhido = pai;
+    if(escolherSuperior) $('euSup').oninput = () => {
+      const v = $('euSup').value.trim(), achado = unidades().find(x => rotulo(x) === v) || unidades().find(x => x.code === v);
+      paiEscolhido = achado || null;
+      if(achado || !v) $('euCod').value = proximoCodigo(paiEscolhido);
+    };
     $('euOk').onclick = async () => {
       const nome = $('euNome').value.trim(), cod = $('euCod').value.trim(), msg = $('euMsg');
+      if(escolherSuperior && $('euSup').value.trim() && !paiEscolhido){ msg.textContent = 'Escolha a unidade superior na lista (ou deixe vazio).'; return; }
+      pai = paiEscolhido;
       if(nome.length < 2){ msg.textContent = 'Informe o nome da unidade.'; return; }
       if(novo && !cod){ msg.textContent = 'Informe o código.'; return; }
       if(novo && unPorCodigo(cod)){ msg.textContent = 'Já existe uma unidade com o código ' + cod + '.'; return; }
