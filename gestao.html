@@ -224,7 +224,7 @@ html.retomando #abrindoPainel{display:flex}
 <div id="app" style="display:none">
   <div class="topo">
     <div class="marca"><span data-marca="nome">Levantamento Patrimonial</span><small id="topoOrg">Módulo de gestão</small></div>
-    <div class="quem"><b id="quemNome">—</b><span id="quemEmail"></span><span class="papel-tag" id="quemPapel"></span><select id="trocaOrg" onchange="trocarOrg(this.value)" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;border:0;font-size:12px;max-width:220px"></select><a href="index.html" style="display:inline-block;margin-top:6px;margin-right:10px;color:inherit;opacity:.85;font-size:12px">← Voltar ao app</a><button type="button" onclick="sairGestao()" style="margin-top:6px;background:none;border:1px solid currentColor;color:inherit;opacity:.85;border-radius:6px;padding:2px 10px;font-size:12px;cursor:pointer">Sair</button></div>
+    <div class="quem"><b id="quemNome">—</b><span id="quemEmail"></span><span class="papel-tag" id="quemPapel"></span><select id="trocaOrg" onchange="trocarOrg(this.value)" style="display:none;margin-top:6px;padding:4px 8px;border-radius:6px;border:0;font-size:12px;max-width:220px"></select><div style="margin-top:6px"><a href="index.html" style="display:inline-block;margin-right:10px;color:inherit;opacity:.85;font-size:12px">← Voltar ao app</a><button type="button" onclick="sairGestao()" style="background:none;border:1px solid currentColor;color:inherit;opacity:.85;border-radius:6px;padding:2px 10px;font-size:12px;cursor:pointer">Sair</button></div></div>
   </div>
   <div class="abas">
     <button class="on" data-sec="painel" onclick="aba(this)">Painel</button>
@@ -1098,5 +1098,6 @@ async function revalidarAcesso(token){
 
 try{ if(typeof checarSessaoGoogle==="function"){ if(document.readyState!=="loading") checarSessaoGoogle(); else document.addEventListener("DOMContentLoaded", checarSessaoGoogle); } }catch(_){}
 </script>
+<script src="painel-campanha.js"></script>
 </body>
 </html>

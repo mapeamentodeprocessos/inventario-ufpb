@@ -193,6 +193,20 @@
   .lv-res div{padding:8px 11px;border-bottom:1px solid var(--border-soft,#ECE8DD);cursor:pointer;font-size:13px}
   .lv-res div:hover{background:var(--success-bg)}
   .lv-res small{display:block;font-size:11px;color:var(--text-faint)}
+  .lv-proximo{display:flex;gap:14px;align-items:center;background:linear-gradient(135deg,var(--verde,#1A4731),#2a6b49);color:#fff;border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:0 6px 18px rgba(26,71,49,.18)}
+  .lv-proximo .ic{font-size:26px;flex-shrink:0}
+  .lv-proximo .tx{flex:1;min-width:0;font-size:13px;line-height:1.45}
+  .lv-proximo .tx small{display:block;font-family:var(--font-mono,monospace);font-size:10px;letter-spacing:.8px;text-transform:uppercase;opacity:.8;margin-bottom:2px}
+  .lv-proximo .tx b{font-size:15px;display:block}
+  .lv-proximo button{flex-shrink:0;font-family:inherit;font-weight:700;font-size:13px;background:#fff;color:var(--verde,#1A4731);border:0;border-radius:10px;padding:10px 14px;cursor:pointer}
+  .aj-passos{margin:6px 0 12px;padding-left:20px;font-size:13.5px;line-height:1.6}
+  .aj-passos li{margin-bottom:6px}
+  .aj-dica{background:var(--success-bg,#E8F2EC);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--verde,#1A4731);line-height:1.5}
+  .cm-det{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:13px}
+  .cm-det summary{cursor:pointer;font-weight:600}
+  .cm-lst{max-height:240px;overflow-y:auto;margin-top:6px}
+  .cm-lst div{padding:5px 0;border-bottom:1px solid var(--border-soft,#ECE8DD)}
+  .cm-lst small{display:block;color:var(--text-faint);font-size:11.5px}
   .herdado-badge{font-family:var(--font-mono,monospace);font-size:10px;padding:2px 7px;border-radius:9px;background:#e7eef6;color:#0D3B6E;margin-right:6px}
   .herdados-barra{background:#e7eef6;border:1px solid #c9d8ea;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#0D3B6E;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;line-height:1.45}
   .aviso-processado{background:var(--success-bg);border:1px solid #c4dccb;border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--verde);margin-bottom:12px;line-height:1.45}
@@ -236,11 +250,12 @@
     ITENS.map(i => i.length === 1 ? `<div class="ml-sec">${esc(i[0])}</div>` : `<button type="button" data-ir="${i[0]}"><span class="i">${i[1]}</span>${esc(i[2])}</button>`).join('') + '</nav>';
   const fundo = document.createElement('div'); fundo.id = 'menuFundo'; fundo.className = 'menu-fundo';
   const barra = document.createElement('header'); barra.className = 'barra-app';
-  barra.innerHTML = '<button type="button" id="menuBtn" aria-label="Abrir menu">☰</button><span class="ba-titulo" id="baTitulo">Início</span><span class="ba-org" id="baOrg"></span>';
+  barra.innerHTML = '<button type="button" id="menuBtn" aria-label="Abrir menu">☰</button><span class="ba-titulo" id="baTitulo">Início</span><span class="ba-org" id="baOrg"></span><button type="button" id="ajudaBtn" aria-label="Ajuda desta tela" title="Como usar esta tela">?</button>';
   document.body.prepend(aside); document.body.prepend(fundo); app.parentNode.insertBefore(barra, app);
   document.body.classList.add('com-menu');
   const abrirMenu = v => { aside.classList.toggle('aberto', v); fundo.classList.toggle('on', v); };
   $('menuBtn').onclick = () => abrirMenu(!aside.classList.contains('aberto'));
+  $('ajudaBtn').onclick = () => abrirAjuda();
   fundo.onclick = () => abrirMenu(false);
   aside.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => irPara(b.dataset.ir));
   function atualizarCabecalho(){
@@ -297,9 +312,13 @@
     const nUn = A().unidades().length, E = window.ESTRUTURA, nAmbCad = E ? A().unidades().reduce((t, u) => t + E.locaisDe(u.code).length, 0) : 0;
     const avisoEstr = !nUn ? `<div class="es-aviso" style="margin-bottom:14px"><b>Cadastre a estrutura organizacional primeiro.</b> O levantamento é feito por unidade e pelos ambientes de cada unidade.
         ${E && E.podeEditar() ? '<br><button class="lv-btn" type="button" data-ir2="estrutura" style="margin-top:8px">🌳 Cadastrar estrutura</button>' : '<br>Peça à gestão patrimonial (gestor ou administrador) para cadastrá-la.'}</div>` : '';
+    const prox = proximoPasso();
+    const cardProx = prox && nUn ? `<div class="lv-proximo"><span class="ic">${prox.ic}</span><span class="tx"><small>Próximo passo</small><b>${esc(prox.titulo)}</b>${esc(prox.texto)}</span>
+      <button type="button" id="proxBtn">${esc(prox.botao)} →</button></div>` : '';
     $('inicioConteudo').innerHTML = avisoEstr + `
       <div class="lv-saudacao">Olá${nome && nome !== 'não' ? ', ' + esc(nome) : ''}</div>
       <p class="lv-sub">${esc(org().nome || 'Levantamento patrimonial')}${org().papel ? ' · seu papel: ' + esc(org().papel) : ''}</p>
+      ${cardProx}
       <div class="lv-kpis">
         <div class="lv-kpi"><b>${andamento.length}</b><span>levantamentos em andamento</span></div>
         <div class="lv-kpi"><b>${ambs.filter(a => a.status === 'coletado').length}/${ambs.length}</b><span>ambientes concluídos</span></div>
@@ -320,8 +339,54 @@
         <ol class="lv-passos"><li>Confira a <b>estrutura organizacional</b>: as unidades e os ambientes de cada uma.</li><li>Toque em <b>Iniciar levantamento</b> e escolha a unidade e a campanha.</li><li>Se houver levantamento do ano anterior, importe-o como ponto de partida.</li>
         <li>Crie os ambientes (salas) e lance ou confirme os bens.</li><li>Ao final, <b>processe</b> o levantamento para fechar o resultado.</li></ol></div>`}</div>`;
     ligarCartoes($('inicioLevs'));
+    if(prox && $('proxBtn')) $('proxBtn').onclick = prox.acao;
     $('inicioConteudo').querySelectorAll('[data-ir2]').forEach(b => b.onclick = () => irPara(b.dataset.ir2));
     $('inicioConteudo').querySelectorAll('[data-amb]').forEach(b => b.onclick = () => abrirAmbiente(b.dataset.amb));
+  }
+  // o que fazer agora, conforme a situação de quem está usando
+  function proximoPasso(){
+    const E = window.ESTRUTURA, ed = E && E.podeEditar();
+    const unid = A().unidades();
+    if(!unid.length) return null;
+    const temAmbCad = E && unid.some(u => E.locaisDe(u.code).length);
+    const abertos = LEVS.filter(l => l.status !== 'processado');
+    if(!LEVS.length){
+      if(ed && E && !E.semTabela && !temAmbCad) return { ic:'🌳', titulo:'Cadastre os ambientes das unidades', texto:'Com as salas de cada unidade cadastradas, o levantamento já começa com os ambientes prontos.', botao:'Abrir estrutura', acao: () => irPara('estrutura') };
+      return { ic:'🚀', titulo:'Inicie o seu primeiro levantamento', texto:'Escolha a unidade e o tipo de levantamento. Leva menos de um minuto.', botao:'Iniciar', acao: () => iniciarLevantamento() };
+    }
+    // levantamento com tudo coletado e ainda não processado
+    const pronto = abertos.find(l => { const n = numeros(l); return n.total && n.coletados === n.total; });
+    if(pronto) return { ic:'⚙', titulo:'Processe o levantamento de ' + (pronto.unidade ? pronto.unidade.name : ''), texto:'Todos os ambientes foram concluídos. Processar fecha o resultado e gera o relatório e o termo.', botao:'Processar', acao: () => { abrirLev(pronto); setTimeout(() => processarLev(pronto), 50); } };
+    // continuar a coleta: o ambiente pendente mais recente
+    for(const l of abertos){
+      const pend = ambsDe(l).filter(a => a.status !== 'coletado' && !a.processado);
+      if(pend.length){ const a = pend[0], n = numeros(l);
+        return { ic:'▶', titulo:'Continue a coleta em ' + a.name, texto:(l.unidade ? l.unidade.name + ' · ' : '') + n.coletados + ' de ' + n.total + ' ambientes concluídos.', botao:'Continuar', acao: () => { veioDoLev = true; LEV_ABERTO = l; A().esconderTelas(); A().abrir(a); } }; }
+      if(!ambsDe(l).length) return { ic:'＋', titulo:'Crie os ambientes de ' + (l.unidade ? l.unidade.name : 'seu levantamento'), texto:'O levantamento ainda não tem ambientes. Use os cadastrados da unidade ou crie em campo.', botao:'Abrir levantamento', acao: () => abrirLev(l) };
+    }
+    const proc = LEVS.filter(l => l.status === 'processado').sort((a, b) => String(b.processadoEm).localeCompare(String(a.processadoEm)))[0];
+    if(proc) return { ic:'📜', titulo:'Feche com o termo de encerramento', texto:'O levantamento de ' + (proc.unidade ? proc.unidade.name : '') + ' foi processado. Emita o relatório e o termo de encerramento, ou inicie o da próxima unidade.', botao:'Ver levantamento', acao: () => abrirLev(proc) };
+    return { ic:'🚀', titulo:'Inicie um novo levantamento', texto:'Escolha a próxima unidade.', botao:'Iniciar', acao: () => iniciarLevantamento() };
+  }
+  /* ---------------- ajuda de cada tela ---------------- */
+  const AJUDA = {
+    screenInicio: ['Início', ['O cartão verde mostra o <b>próximo passo</b> — é só tocar no botão.', 'Os números de cima resumem os levantamentos deste aparelho.', 'Use <b>☰</b> (menu) para ir a qualquer parte do app.'], 'Comece sempre por aqui: o app indica o que fazer em seguida.'],
+    screenEstrutura: ['Estrutura organizacional', ['<b>Lista de cadastradas</b>: todas as unidades, com a superior e os ambientes de cada uma.', '<b>＋ Cadastrar unidade</b>: crie uma unidade e escolha a de cima.', 'Toque numa unidade para ver e cadastrar os <b>ambientes</b> (vários de uma vez, um por linha).', '<b>Importar / Exportar</b>: trabalhe em planilha e traga de volta.'], 'Sem a estrutura não há levantamento: ele é feito por unidade e pelos ambientes de cada unidade.'],
+    screenLevantamentos: ['Levantamentos', ['Cada cartão é um levantamento: uma unidade numa campanha.', 'Toque no nome para abrir, coletar, processar ou emitir documentos.', 'Use a busca e o filtro para achar rápido.'], 'Um levantamento só termina quando é <b>processado</b>.'],
+    screenLevantamento: ['Levantamento', ['<b>Ambientes</b>: toque num ambiente para coletar os bens dele.', '<b>⚖ Conciliação</b>: compara o que foi achado com a base oficial.', '<b>📊 Comparar com o anterior</b>: o que entrou, saiu e mudou de sala desde o último inventário.', 'Ao final, <b>⚙ Processar</b> fecha o resultado e libera relatório e termo.'], 'Dá para reabrir um levantamento processado, informando o motivo.'],
+    screenAmbientes: ['Unidades e ambientes', ['Os ambientes deste aparelho, agrupados por unidade.', 'Toque num ambiente para continuar a coleta.', '<b>+ Novo ambiente</b> cria uma sala nova em campo.'], 'Os ambientes cadastrados na estrutura aparecem como sugestão ao criar um novo.'],
+    screenNewAmbiente: ['Novo ambiente', ['Escolha a <b>unidade</b>: os ambientes cadastrados dela aparecem para tocar e usar.', 'Confira a <b>campanha</b>.', 'Toque em <b>Criar ambiente e iniciar coleta</b>.'], 'Se o ambiente não estiver cadastrado, o gestor que criar aqui já o cadastra na estrutura.'],
+    screenCollection: ['Coleta do ambiente', ['<b>Foto</b>: tire uma foto da sala e o app sugere os bens.', '<b>Plaqueta</b>: leia o código ou digite o número.', 'Bens que vieram do levantamento anterior: toque <b>✓</b> se achou ou <b>✕ Não localizado</b>.', 'Ao terminar, toque em <b>Concluir ambiente</b>.'], 'Tudo é salvo no aparelho na hora, mesmo sem internet, e enviado quando a conexão voltar.'],
+    screenBase: ['Base oficial e backup', ['<b>Base oficial</b>: a planilha do sistema patrimonial, usada para conferir o que foi achado.', '<b>Backup</b>: guarda uma cópia de tudo o que está neste aparelho.'], 'Gestores podem publicar a base na nuvem para toda a equipe.'],
+    screenControle: ['Conferência e controle', ['<b>Conciliação</b>: achado em campo × base oficial.', '<b>Transferências</b>: mova bens entre setores com aceite.', '<b>Termos</b>: termo de responsabilidade e de encerramento.', '<b>Histórico</b>: tudo o que mudou em cada bem.'], 'Os documentos saem com código de verificação.']
+  };
+  function abrirAjuda(){
+    const vis = [...document.querySelectorAll('.app > div')].find(d => d.style.display === 'block' && AJUDA[d.id]);
+    const [titulo, passos, dica] = AJUDA[vis ? vis.id : 'screenInicio'];
+    ui().abrirModal('Como usar: ' + titulo, `<ol class="aj-passos">${passos.map(p => '<li>' + p + '</li>').join('')}</ol>
+      ${dica ? '<div class="aj-dica">💡 ' + dica + '</div>' : ''}
+      <button class="btn btn-ghost btn-full" id="ajTutorial" type="button" style="margin-top:12px">Ver o tutorial completo</button>`);
+    $('ajTutorial').onclick = () => { ui().fecharModal(); if(window.abrirTutorial) window.abrirTutorial(); };
   }
   function abrirAmbiente(id){ const a = A().todos().find(x => String(x.id) === String(id)); if(a){ A().esconderTelas(); A().abrir(a); } }
 
@@ -394,7 +459,7 @@
       <div class="lv-btns" style="margin-bottom:14px">
         ${proc ? '' : '<button class="lv-btn pri" id="dNovoAmb">+ Novo ambiente</button><button class="lv-btn" id="dImportar">↺ Importar anterior</button>'}
         <button class="lv-btn" id="dPlanta">▦ Planta</button><button class="lv-btn" id="dConc">⚖ Conciliação</button><button class="lv-btn" id="dTermo">✍ Termo</button>
-        <button class="lv-btn" id="dPlanilha">⭳ Planilha</button>
+        <button class="lv-btn" id="dPlanilha">⭳ Planilha</button><button class="lv-btn" id="dComparar">📊 Comparar com o anterior</button>
         ${proc ? '<button class="lv-btn" id="dRelatorio">🖨 Relatório</button><button class="lv-btn" id="dReabrir">Reabrir</button>' : '<button class="lv-btn pri" id="dProcessar">⚙ Processar levantamento</button>'}
         <button class="lv-btn" id="dEditar">✎ Editar</button><button class="lv-btn perigo" id="dExcluir">🗑 Excluir</button>
       </div>
@@ -412,6 +477,7 @@
     on('dConc', () => resumoConciliacao(l));
     on('dTermo', () => l.unidade && C().termoDaUnidade(l.unidade));
     on('dPlanilha', () => planilhaDoLev(l));
+    on('dComparar', () => compararAnterior(l));
     on('dProcessar', () => processarLev(l)); on('dReabrir', () => reabrirLev(l)); on('dRelatorio', () => relatorioProcessamento(l));
     on('dEditar', () => editarLev(l)); on('dExcluir', () => excluirLev(l));
     $('dAmbs').querySelectorAll('[data-id]').forEach(row => {
@@ -727,6 +793,122 @@
       <div class="ass">${((l.comissao && l.comissao.length) ? l.comissao : [{ nome:'' }, { nome:'' }]).map(m => `<div><div style="height:50px"></div><div class="l">${esc(m.nome || '')}<br>${esc(m.funcao || 'Comissão de inventário')}</div></div>`).join('')}</div>
       <div class="cod">Código de verificação ${esc(l.codigo || '—')} · ${esc((window.PRODUTO && PRODUTO.nome) || '')}</div>`);
   }
+  /* =================================================================
+     COMPARATIVO ANO A ANO: o que entrou, saiu e mudou de sala
+     ================================================================= */
+  // presente agora = confirmado em campo, ou lançado agora (não herdado) e ainda não conferido
+  const presenteAgora = i => i.status === 'confirmed' || (i.status === 'pending' && !i.herdado);
+  async function compararAnterior(lev){
+    if(!lev) return;
+    const locais = LEVS.filter(l => l.id !== lev.id && l.unidade && lev.unidade && l.unidade.code === lev.unidade.code && ambsDe(l).length);
+    const corpo = ui().abrirModal('Comparar com o levantamento anterior', `
+      <p class="ctl-dica">Compara <b>${esc(lev.unidade ? lev.unidade.name : '')}</b> nesta campanha com um levantamento anterior da mesma unidade: o que <b>entrou</b>, o que <b>saiu</b> e o que <b>mudou de ambiente</b>.</p>
+      <div class="ctl-campo"><label>Campanha anterior (nuvem)</label><select id="cmCamp"><option value="">Carregando campanhas…</option></select></div>
+      <button class="btn btn-primary btn-full" id="cmNuvem" type="button" style="margin-bottom:12px">Comparar</button>
+      ${locais.length ? `<div class="ctl-campo"><label>Ou um levantamento deste aparelho</label></div><div class="ctl-escolha">${locais.map(l => `<button type="button" data-l="${l.id}">${esc(l.campanhaNome || 'Sem campanha')}<small>${ambsDe(l).length} ambientes · ${l.status === 'processado' ? 'processado em ' + hoje(l.processadoEm) : 'em andamento'}</small></button>`).join('')}</div>` : ''}
+      <div class="ctl-dica" id="cmMsg"></div>`);
+    buscarCampanhas().then(cs => {
+      const outras = cs.filter(c => c.id !== lev.campanhaId), s = $('cmCamp'); if(!s) return;
+      s.innerHTML = outras.length ? outras.map(c => `<option value="${esc(c.id)}">${esc(String(c.nome).split(' · ')[0])}${c.aberta === false ? ' (encerrada)' : ''}</option>`).join('') : '<option value="">Nenhuma outra campanha na nuvem</option>';
+    });
+    corpo.querySelectorAll('[data-l]').forEach(b => b.onclick = () => {
+      const l = LEVS.find(x => x.id === b.dataset.l);
+      mostrarComparativo(lev, ambsDe(l).map(a => ({ nome: a.name, andar: a.andar, localId: a.localId || null,
+        itens: (a.items || []).filter(presenteAgora).map(i => ({ plaqueta: i.plaqueta, descricao: i.description, conservacao: i.conservacao })) })), l.campanhaNome || 'levantamento anterior');
+    });
+    $('cmNuvem').onclick = async () => {
+      const camp = $('cmCamp').value, msg = $('cmMsg'); if(!camp){ msg.textContent = 'Escolha a campanha.'; return; }
+      if(!lev.unidade){ msg.textContent = 'Este levantamento não tem unidade.'; return; }
+      msg.textContent = 'Buscando o levantamento anterior…';
+      try{
+        const filtro = '/rest/v1/ambientes?campanha_id=eq.' + camp + '&unidade_code=eq.' + encodeURIComponent(lev.unidade.code);
+        let ambs;
+        try{ ambs = await ui().nuvem(filtro + '&select=id,nome,andar,local_id&limit=5000'); }
+        catch(e){ ambs = await ui().nuvem(filtro + '&select=id,nome,andar&limit=5000'); }
+        if(!ambs || !ambs.length){ msg.textContent = 'Essa campanha não tem ambientes desta unidade.'; return; }
+        const itens = [];
+        for(let i = 0; i < ambs.length; i += 40){
+          const ids = ambs.slice(i, i + 40).map(a => a.id).join(',');
+          itens.push(...((await ui().nuvem('/rest/v1/itens?ambiente_id=in.(' + ids + ')&select=ambiente_id,descricao,plaqueta,conservacao,status&limit=20000')) || []));
+        }
+        mostrarComparativo(lev, ambs.map(a => ({ nome: a.nome, andar: a.andar, localId: a.local_id || null,
+          itens: itens.filter(i => i.ambiente_id === a.id && i.status === 'confirmed').map(i => ({ plaqueta: i.plaqueta, descricao: i.descricao, conservacao: i.conservacao })) })), nomeCamp(camp));
+      }catch(e){ msg.textContent = 'Não foi possível buscar: ' + String(e.message).slice(0, 160); }
+    };
+  }
+  function calcularComparativo(lev, anteriores){
+    const P = v => A().normPlaq(v);
+    const atuais = ambsDe(lev).map(a => ({ nome: a.name, andar: a.andar, localId: a.localId || null,
+      itens: (a.items || []).filter(presenteAgora).map(i => ({ plaqueta: i.plaqueta, descricao: i.description, conservacao: i.conservacao })),
+      aConferir: (a.items || []).filter(i => i.status === 'pending' && i.herdado).map(i => P(i.plaqueta)).filter(Boolean) }));
+    const chaveAmb = a => a.localId ? 'L:' + a.localId : 'N:' + norm(a.nome);
+    // casa os ambientes de antes e de agora (pelo cadastro da estrutura ou pelo nome)
+    const antesPorChave = new Map(), agoraPorChave = new Map();
+    anteriores.forEach(a => { antesPorChave.set(chaveAmb(a), a); antesPorChave.set('N:' + norm(a.nome), antesPorChave.get('N:' + norm(a.nome)) || a); });
+    atuais.forEach(a => agoraPorChave.set(chaveAmb(a), a));
+    const parDe = a => antesPorChave.get(chaveAmb(a)) || antesPorChave.get('N:' + norm(a.nome)) || null;
+    const ondeAntes = new Map(), ondeAgora = new Map();
+    anteriores.forEach(a => a.itens.forEach(i => { const k = P(i.plaqueta); if(k) ondeAntes.set(k, { amb: a, i }); }));
+    atuais.forEach(a => a.itens.forEach(i => { const k = P(i.plaqueta); if(k) ondeAgora.set(k, { amb: a, i }); }));
+    const aConferir = new Set(atuais.flatMap(a => a.aConferir));
+    const entraram = [], sairam = [], mudaram = [], ficaram = [], pendentes = [];
+    ondeAgora.forEach((v, k) => {
+      const ant = ondeAntes.get(k);
+      if(!ant) entraram.push({ plaqueta: v.i.plaqueta, descricao: v.i.descricao, agora: v.amb.nome });
+      else if(parDe(v.amb) === ant.amb) ficaram.push(k);
+      else mudaram.push({ plaqueta: v.i.plaqueta, descricao: v.i.descricao, antes: ant.amb.nome, agora: v.amb.nome });
+    });
+    ondeAntes.forEach((v, k) => {
+      if(ondeAgora.has(k)) return;
+      if(aConferir.has(k)) pendentes.push({ plaqueta: v.i.plaqueta, descricao: v.i.descricao, antes: v.amb.nome });
+      else sairam.push({ plaqueta: v.i.plaqueta, descricao: v.i.descricao, antes: v.amb.nome });
+    });
+    const semPlaqAntes = anteriores.reduce((t, a) => t + a.itens.filter(i => !P(i.plaqueta)).length, 0), semPlaqAgora = atuais.reduce((t, a) => t + a.itens.filter(i => !P(i.plaqueta)).length, 0);
+    // por ambiente
+    const nomes = new Map();
+    atuais.forEach(a => nomes.set(chaveAmb(a), { nome: a.nome, agora: a, antes: parDe(a) }));
+    anteriores.forEach(a => { if(![...nomes.values()].some(x => x.antes === a)) nomes.set('ant:' + chaveAmb(a), { nome: a.nome, agora: null, antes: a }); });
+    const porAmb = [...nomes.values()].map(x => ({
+      nome: x.nome, novo: !x.antes, deixou: !x.agora,
+      antes: x.antes ? x.antes.itens.length : 0, agora: x.agora ? x.agora.itens.length : 0,
+      entraram: entraram.filter(e => x.agora && e.agora === x.agora.nome).length + mudaram.filter(m => x.agora && m.agora === x.agora.nome).length,
+      sairam: sairam.filter(e => x.antes && e.antes === x.antes.nome).length + mudaram.filter(m => x.antes && m.antes === x.antes.nome).length
+    })).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR', { numeric:true }));
+    return { entraram, sairam, mudaram, ficaram: ficaram.length, pendentes, porAmb, semPlaqAntes, semPlaqAgora,
+      totalAntes: anteriores.reduce((t, a) => t + a.itens.length, 0), totalAgora: atuais.reduce((t, a) => t + a.itens.length, 0) };
+  }
+  function mostrarComparativo(lev, anteriores, rotuloAntes){
+    const r = calcularComparativo(lev, anteriores), un = lev.unidade ? lev.unidade.name : '';
+    const lista = (titulo, cor, itens, cols) => itens.length ? `<details class="cm-det"><summary><span style="color:${cor}">●</span> ${titulo} <b>${itens.length}</b></summary>
+      <div class="cm-lst">${itens.slice(0, 300).map(i => `<div><b>${esc(i.plaqueta || '—')}</b> ${esc(i.descricao || '')}<small>${cols(i)}</small></div>`).join('')}${itens.length > 300 ? '<div><small>… e mais ' + (itens.length - 300) + ' (veja na planilha)</small></div>' : ''}</div></details>` : '';
+    ui().abrirModal('Comparativo ano a ano', `
+      <p class="ctl-dica"><b>${esc(un)}</b>: ${esc(rotuloAntes)} → ${esc(lev.campanhaNome || 'agora')}</p>
+      <div class="lv-kpis" style="grid-template-columns:repeat(3,1fr)">
+        <div class="lv-kpi"><b>${r.totalAntes}</b><span>bens antes</span></div><div class="lv-kpi"><b>${r.totalAgora}</b><span>bens agora</span></div>
+        <div class="lv-kpi"><b>${r.ficaram}</b><span>no mesmo ambiente</span></div>
+        <div class="lv-kpi"><b style="color:#1A7F4B">+${r.entraram.length}</b><span>entraram</span></div>
+        <div class="lv-kpi${r.sairam.length ? ' alerta' : ''}"><b style="color:#B03A2E">−${r.sairam.length}</b><span>saíram / não achados</span></div>
+        <div class="lv-kpi"><b style="color:#B5651D">${r.mudaram.length}</b><span>mudaram de ambiente</span></div>
+      </div>
+      ${r.pendentes.length ? `<div class="es-aviso">${r.pendentes.length} bem(ns) do levantamento anterior ainda <b>não foram conferidos</b> agora (estão "aguardando conferência"). Eles não contam como saída até a conferência terminar.</div>` : ''}
+      <div style="overflow-x:auto;margin-bottom:10px"><table class="es-tab"><thead><tr><th>Ambiente</th><th style="text-align:right">Antes</th><th style="text-align:right">Agora</th><th style="text-align:right">Entraram</th><th style="text-align:right">Saíram</th></tr></thead><tbody>
+        ${r.porAmb.map(a => `<tr><td>${esc(a.nome)}${a.novo ? ' <small style="color:#1A7F4B">novo ambiente</small>' : ''}${a.deixou ? ' <small style="color:#B03A2E">não levantado agora</small>' : ''}</td>
+          <td style="text-align:right">${a.antes}</td><td style="text-align:right"><b>${a.agora}</b></td><td style="text-align:right;color:#1A7F4B">${a.entraram ? '+' + a.entraram : ''}</td><td style="text-align:right;color:#B03A2E">${a.sairam ? '−' + a.sairam : ''}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${lista('Entraram', '#1A7F4B', r.entraram, i => 'agora em ' + esc(i.agora))}
+      ${lista('Mudaram de ambiente', '#B5651D', r.mudaram, i => esc(i.antes) + ' → ' + esc(i.agora))}
+      ${lista('Saíram ou não foram achados', '#B03A2E', r.sairam, i => 'estava em ' + esc(i.antes))}
+      ${lista('Ainda aguardando conferência', '#7A7A7A', r.pendentes, i => 'estava em ' + esc(i.antes))}
+      ${r.semPlaqAntes || r.semPlaqAgora ? `<p class="ctl-dica">Bens sem plaqueta não entram na comparação item a item (antes ${r.semPlaqAntes}, agora ${r.semPlaqAgora}).</p>` : ''}
+      <button class="btn btn-primary btn-full" id="cmXls" type="button" style="margin-top:10px">⭳ Baixar planilha do comparativo</button>`);
+    $('cmXls').onclick = () => ui().baixarPlanilha('comparativo-' + norm(un).replace(/[^a-z0-9]+/g, '-').slice(0, 40), [
+      { nome:'Por ambiente', linhas: r.porAmb.map(a => ({ 'Ambiente': a.nome, 'Bens antes': a.antes, 'Bens agora': a.agora, 'Entraram': a.entraram, 'Saíram': a.sairam, 'Observação': a.novo ? 'ambiente novo' : (a.deixou ? 'não levantado agora' : '') })) },
+      { nome:'Entraram', linhas: r.entraram.map(i => ({ 'Plaqueta': i.plaqueta, 'Descrição': i.descricao, 'Ambiente atual': i.agora })) },
+      { nome:'Mudaram de ambiente', linhas: r.mudaram.map(i => ({ 'Plaqueta': i.plaqueta, 'Descrição': i.descricao, 'Antes': i.antes, 'Agora': i.agora })) },
+      { nome:'Saíram', linhas: r.sairam.map(i => ({ 'Plaqueta': i.plaqueta, 'Descrição': i.descricao, 'Estava em': i.antes })) },
+      { nome:'Aguardando conferência', linhas: r.pendentes.map(i => ({ 'Plaqueta': i.plaqueta, 'Descrição': i.descricao, 'Estava em': i.antes })) }
+    ]);
+  }
   function planilhaDoLev(l){
     const ambs = ambsDe(l), sit = { pending:'aguardando conferência', confirmed:'confirmado', discarded:'não localizado / descartado' };
     ui().baixarPlanilha('levantamento-' + norm(l.unidade ? l.unidade.name : 'unidade').replace(/[^a-z0-9]+/g, '-').slice(0, 40), [
@@ -910,7 +1092,7 @@
 
   /* ---------------- início ---------------- */
   window.LEV = {
-    vincular, irPara, abrirLev, fonteCadastro, todos: () => LEVS, recarregar: carregar, iniciar: iniciarLevantamento,
+    vincular, irPara, abrirLev, fonteCadastro, compararAnterior, calcularComparativo, todos: () => LEVS, recarregar: carregar, iniciar: iniciarLevantamento,
     async importarLista(lista){ LEVS = lista; await gravar(); },
     abrirDaUnidade(u){ const l = LEVS.find(x => x.status !== 'processado' && x.unidade && x.unidade.code === u.code) || LEVS.find(x => x.unidade && x.unidade.code === u.code); if(l) abrirLev(l); else iniciarLevantamento({ unidade: { code: u.code, name: u.name, path: u.path || '' } }); },
     async aoIniciar(){
